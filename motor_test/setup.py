@@ -40,7 +40,8 @@ setup(
     # ここを忘れていると実行ができません。
     entry_points={
         'console_scripts': [
-        'path_follower_test = try_navigation.path_follower:main'
+        'path_follower_test = motor_test.path_follower_test:main',
+        "motor_driver_node = motor_test.motor_driver_node:main"
         ],
     },
 )
