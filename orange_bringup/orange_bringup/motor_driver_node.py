@@ -26,11 +26,11 @@ class MotorDriverNode(Node):
         self.declare_parameter("cmd_dist_topic", "/zlac8015d/pos/cmd_dist")
         self.declare_parameter("control_mode", 3)
         self.declare_parameter("callback_timeout", 0.5)
-        self.declare_parameter("wheels_base_width", 0.5668)
-        self.declare_parameter("left_wheel_radius", 0.1015)
-        self.declare_parameter("right_wheel_radius", 0.1015)
-        self.declare_parameter("computation_left_wheel_radius", 0.1015)
-        self.declare_parameter("computation_right_wheel_radius", 0.1015)
+        self.declare_parameter("wheels_base_width", 0.290)
+        self.declare_parameter("left_wheel_radius", 0.064)
+        self.declare_parameter("right_wheel_radius", 0.064)
+        self.declare_parameter("computation_left_wheel_radius", 0.064)
+        self.declare_parameter("computation_right_wheel_radius", 0.064)
         self.declare_parameter("cpr", 16385)
         self.declare_parameter("deadband_rpm", 3)
         self.declare_parameter("max_left_rpm", 150)
@@ -472,6 +472,34 @@ class MotorDriverNode(Node):
         q[3] = sy * cp * cr - cy * sp * sr
         return q
 
+    # 20260304 not use numpy
+    def to_signed32(self, hi, lo):
+        value = ((hi & 0xFFFF) << 16) | (lo & 0xFFFF)
+        if value >= 0x80000000:
+            value -= 0x100000000
+        return value
+
+    def get_wheels_travelled(self):
+        registers = self.modbus_fail_read_handler(self.L_FB_POS_HI, 4)
+
+        l_pulse = self.to_signed32(registers[0], registers[1])
+        r_pulse = self.to_signed32(registers[2], registers[3])
+
+        l_travelled = (
+            (float(l_pulse) / self.cpr)
+            * self.computation_left_wheel_radius
+            * np.pi * 8
+        )
+
+        r_travelled = (
+            (float(r_pulse) / self.cpr)
+            * self.computation_right_wheel_radius
+            * np.pi * 8
+        )
+
+        return l_travelled, r_travelled
+    
+    '''
     def get_wheels_travelled(self):
         registers = self.modbus_fail_read_handler(self.L_FB_POS_HI, 4)
         l_pul_hi = registers[0]
@@ -491,6 +519,7 @@ class MotorDriverNode(Node):
             * 8
         )  # unit in meter
         return l_travelled, r_travelled
+    '''
 
     def modbus_fail_read_handler(self, ADDR, WORD):
         read_success = False
