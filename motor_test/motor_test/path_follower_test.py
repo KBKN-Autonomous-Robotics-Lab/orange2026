@@ -1,6 +1,4 @@
-# rclpy (ROS 2のpythonクライアント)の機能を使えるようにします。
 import rclpy
-# rclpy (ROS 2のpythonクライアント)の機能のうちNodeを簡単に使えるようにします。こう書いていない場合、Nodeではなくrclpy.node.Nodeと書く必要があります。
 from rclpy.node import Node
 import std_msgs.msg as std_msgs
 import nav_msgs.msg as nav_msgs
@@ -10,54 +8,86 @@ import math
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy, QoSReliabilityPolicy
 import time
 import geometry_msgs.msg as geometry_msgs
-from rclpy.action import ActionServer ####
-from my_msgs.action import StopFlag ####
-from geometry_msgs.msg import PoseStamped
-from std_msgs.msg import Int32
-from std_msgs.msg import String
-
+from rclpy.action import ActionServer
+# my_msgsが環境にない場合はエラーになるため注意してください
+# from my_msgs.action import StopFlag 
+from geometry_msgs.msg import PoseStamped, Twist
+from std_msgs.msg import Int32, String
 
 class TestPF(Node):
-    # コンストラクタです、PcdRotationクラスのインスタンスを作成する際に呼び出されます。
     def __init__(self):
-        # 継承元のクラスを初期化します。
         super().__init__('path_follower_test_node')
         
-        # 1. qos_profile の定義が必要です
         qos_profile = QoSProfile(
             history=QoSHistoryPolicy.KEEP_LAST,
             reliability=QoSReliabilityPolicy.RELIABLE,
             durability=QoSDurabilityPolicy.VOLATILE,
             depth=1
         )
-     # タイマーを0.05秒（50ミリ秒）ごとに呼び出す
-        self.timer = self.create_timer(0.05, self.robot_ctrl)   
-     # Publisherを作成
-        self.cmd_vel_publisher = self.create_publisher(geometry_msgs.Twist, 'cmd_vel', qos_profile) #set publish pcd topic name##mosikasitara '/zlac8015d/twist/cmd_vel'ga topic ni narukamo
+
+        # ----- パラメータ設定 -----
+        self.declare_parameter('twist_time', 10.0)      # 停止までの時間（秒）
+        self.declare_parameter('linear_speed', 1.10)   # 前進速度
+        self.declare_parameter('angular_speed', 1.0)   # 角速度
+
+        self.limit_time = self.get_parameter('twist_time').get_parameter_value().double_value
+        self.start_time = time.perf_counter() # 開始時間の記録
+        self.running = True                   # 走行状態フラグ
+
+        # Publisherを作成
+        # モータードライバ(motor_driver_node)と合わせる場合は '/zlac8015d/twist/cmd_vel' に変更してください
+        self.cmd_vel_publisher = self.create_publisher(Twist, 'cmd_vel', qos_profile) 
         
+        # タイマー設定 (0.05秒周期)
+        self.timer = self.create_timer(0.05, self.robot_ctrl)
+        self.get_logger().info(f'Test started: {self.limit_time}s remaining...')
+
+    def check_finish_time(self):
+        """経過時間をチェックし、制限時間を超えていればTrueを返す関数"""
+        elapsed_time = time.perf_counter() - self.start_time
+        return elapsed_time >= self.limit_time
+
     def robot_ctrl(self):
-         #set speed
-        speed_set = 1.10#55 AutoNav 1.10
+        # 終了判定
+        if self.running and self.check_finish_time():
+            self.stop_robot()
+            return
+
+        if not self.running:
+            return
+
+        # 走行用メッセージ作成
+        speed_set = self.get_parameter('linear_speed').value
+        angular_set = self.get_parameter('angular_speed').value
         
-        #make msg
-        twist_msg = geometry_msgs.Twist()
-        twist_msg.linear.x = speed_set  # 前進速度 (m/s)
-        twist_msg.angular.z = 1.0  # 角速度 (rad/s)
+        twist_msg = Twist()
+        twist_msg.linear.x = speed_set
+        twist_msg.angular.z = angular_set
         
         self.cmd_vel_publisher.publish(twist_msg)
-def main(args=None):
-    # rclpyの初期化処理です。ノードを立ち上げる前に実装する必要があります。
-    rclpy.init(args=args)
-    # クラスのインスタンスを作成
-    path_follower_test = TestPF()
-    # spin処理を実行、spinをしていないとROS 2のノードはデータを入出力することが出来ません。
-    rclpy.spin(path_follower_test)
-    # 明示的にノードの終了処理を行います。
-    path_follower_test.destroy_node()
-    # rclpyの終了処理、これがないと適切にノードが破棄されないため様々な不具合が起こります。
-    rclpy.shutdown()
-# 本スクリプト(publish.py)の処理の開始地点です。
-if __name__ == '__main__':
-    # 関数`main`を実行する。
-    main()
+
+    def stop_robot(self):
+        """ロボットを停止させ、ノードを終了する準備を行う"""
+        stop_msg = Twist()
+        stop_msg.linear.x = 0.0
+        stop_msg.angular.z = 0.0
+        self.cmd_vel_publisher.publish(stop_msg)
         
+        self.running = False
+        self.get_logger().info('--- Time is up. Robot Stopped. ---')
+        # 必要に応じてここで強制終了
+        # rclpy.shutdown() 
+
+def main(args=None):
+    rclpy.init(args=args)
+    path_follower_test = TestPF()
+    try:
+        rclpy.spin(path_follower_test)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        path_follower_test.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
