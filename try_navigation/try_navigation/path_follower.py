@@ -50,6 +50,7 @@ class PathFollower(Node):
         self.subscription = self.create_subscription(sensor_msgs.PointCloud2, '/pcd_segment_obs', self.obs_steer, qos_profile)
         self.goal_sub = self.create_subscription(PoseStamped, '/goal_pose', self.goal_pose_callback, qos_profile)
         self.stop_sub = self.create_subscription(String, '/stop_sign_status', self.stop_sign_callback, 10)
+        self.human_sub = self.create_subscription(String, '/human_status', self.human_callback, 10)
         self.waypoint_number_subscription = self.create_subscription(Int32,'/waypoint_number', self.get_waypoint_number, qos_profile_sub)
         self.subscription  # 警告を回避するために設置されているだけです。削除しても挙動はかわりません。
         
@@ -175,20 +176,42 @@ class PathFollower(Node):
             sd_full_stop_xy = [-32.37441428909107, -16.465277566213718, 0.0]
             self.stop_xy = np.array([
                 #xmin,      xmax,    ymin,   ymax, flag
-                [ sd_full_stop_xy[0]-dist,    sd_full_stop_xy[0]+dist -1.00,     sd_full_stop_xy[1]-2*dist,    sd_full_stop_xy[1]+2*dist, 1.0], #stop point set
+                [ sd_full_stop_xy[0]-dist,    sd_full_stop_xy[0]+dist -0.73,     sd_full_stop_xy[1]-2*dist,    sd_full_stop_xy[1]+2*dist, 1.0], #stop point set
                 [ 999,  999, 999, 999, 0.0] ]) #end
         self.previous_status = None    
+        self.human_status = None    
         ##################################################################
         
     # actionリクエストの受信時に呼ばれる(tuika)
     def listener_callback(self, goal_handle):
         self.get_logger().info(f"Received goal with a: {goal_handle.request.a}, b: {goal_handle.request.b}")
         
-        # クライアントから送られたaをstop_flagに代入
         self.stop_flag = goal_handle.request.a
         print(f"stop_flag set to: {self.stop_flag}")
+        # クライアントから送られたaをstop_flagに代入
+        if goal_handle.request.a == 2:
+            self.get_logger().info("Stop sign mode start")
+
+            # 停止線認識開始
+            time.sllep(2) # 仮の白線認識
+            #self.detect_white_line()
+            self.get_logger().info("White line stop completed")
+
+        # フィードバックの返信
+        feedback = StopFlag.Feedback()
+        feedback.rate = 0.1
+        goal_handle.publish_feedback(feedback)
+
+        goal_handle.succeed()
+        result = StopFlag.Result()
+
+        result.sum = 999
+
+        return result
+
+
         
-        
+        """
         # フィードバックの返信
         for i in range(1):
             feedback = StopFlag.Feedback()
@@ -196,11 +219,13 @@ class PathFollower(Node):
             goal_handle.publish_feedback(feedback)
             #time.sleep(0.5)
 
+        
         # レスポンスの返信
         goal_handle.succeed()
         result = StopFlag.Result()
         result.sum = goal_handle.request.a + goal_handle.request.b  # 結果の計算
-        return result         
+        return result   
+        """      
         
     def get_path(self, msg):
         #self.get_logger().info('Received path with %d waypoints' % len(msg.poses))
@@ -247,8 +272,13 @@ class PathFollower(Node):
     # stop_sign_status トピックのコールバック
     def stop_sign_callback(self, msg):
         # 現在の状態が "Stop" になったら stop_flag を True にする
-        self.previous_status = msg.data       
+        self.previous_status = msg.data   
     
+    # human_status トピックのコールバック
+    def human_callback(self, msg):
+        # 現在の状態が "Stop" になったら stop_flag を True にする
+        self.human_status = msg.data       
+   
     def get_waypoint_number(self, msg):
         #get waypoint number
         self.waypoint_number = msg.data
@@ -280,7 +310,7 @@ class PathFollower(Node):
         
         #set speed
         
-        speed_set = 1.10#55 AutoNav 1.10
+        speed_set = 0.55#55 AutoNav 1.10
         speed = speed_set
         
         ################# IGVC SelfDrive Full #20250601# #################
@@ -359,7 +389,7 @@ class PathFollower(Node):
         if abs(target_theta) < 10:
             if 0.0 < speed:
                 if speed < 0.5:
-                    speed = 0.8 # autonav 0.8
+                    speed = 1.1 # autonav 0.8
         #elif target_theta  < -lim_steer:
         if target_theta  < -lim_steer:
             speed = 0.10
@@ -434,6 +464,17 @@ class PathFollower(Node):
                     self.sd_human_stop = 1
                     self.sd_full_human_stop = 2
             if self.sd_full_human_stop == 2: #fail safe
+                if self.human_status == "Stop":
+                    self.time_restart = 1
+                    self.time_restart_count = 10
+                    self.sd_full_human_stop = 3
+            if self.sd_full_human_stop == 3: #flow3
+                if self.time_restart == 1 and self.stop_flag == 1:
+                    if self.human_status == "Go":
+                        self.time_restart_count -= 1
+                    if self.time_restart_count < 0:
+                        self.time_restart = 0
+                        self.stop_flag = 0
                 if self.waypoint_number == 12:
                    self.sd_quolification_line_stop = 0
                    self.sd_human_stop = 0
