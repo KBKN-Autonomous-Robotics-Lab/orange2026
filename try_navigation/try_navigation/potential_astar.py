@@ -138,7 +138,7 @@ class PotentialAStar(Node):
         self.dot_obs_points = np.array([[],[],[]])
         
         #DRIVE MODE
-        self.functions_test = 0 #autonav:1 selfdrive:0
+        self.functions_test = 1 #autonav:1 selfdrive:0
         
         #obs info for SELF DRIVE
         self.tire_info      = 0

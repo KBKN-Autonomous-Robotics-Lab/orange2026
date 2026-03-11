@@ -26,9 +26,9 @@ class TestPF(Node):
         )
 
         # ----- パラメータ設定 -----
-        self.declare_parameter('twist_time', 10.0)      # 停止までの時間（秒）
-        self.declare_parameter('linear_speed', 1.10)   # 前進速度
-        self.declare_parameter('angular_speed', 1.0)   # 角速度
+        self.declare_parameter('twist_time', 60.0)      # 停止までの時間（秒）
+        self.declare_parameter('linear_speed', 1.08)   # 前進速度
+        self.declare_parameter('angular_speed', 0.5)   # 角速度
 
         self.limit_time = self.get_parameter('twist_time').get_parameter_value().double_value
         self.start_time = time.perf_counter() # 開始時間の記録

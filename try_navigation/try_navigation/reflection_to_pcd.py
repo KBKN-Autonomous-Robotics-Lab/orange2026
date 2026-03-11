@@ -118,7 +118,7 @@ class ReflectionIntensityMap(Node):
         self.left_line_buff = np.array([[],[],[],[]]);
         #self.white_buff = np.array([[],[],[],[]]);
         self.white_buff = np.array([[],[],[],[],[]]);
-        self.duration = 3.0  # time for buff white_buff
+        self.duration = 10.0  # time for buff white_buff default 3.0
 
         self.image_saved = False  # 画像保存フラグ（初回のみ保存する）
         #image_angle
