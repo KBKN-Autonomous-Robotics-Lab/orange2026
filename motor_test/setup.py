@@ -42,7 +42,8 @@ setup(
         'console_scripts': [
         'path_follower_test = motor_test.path_follower_test:main',
         "motor_driver_node = motor_test.motor_driver_node:main",
-        "radius_comp_test = motor_test.radius_comp_test:main"
+        "radius_comp_test = motor_test.radius_comp_test:main",
+        "rad_vel_test = motor_test.rad_vel_test:main"
         ],
     },
 )
