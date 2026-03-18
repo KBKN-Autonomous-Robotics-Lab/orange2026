@@ -32,8 +32,8 @@ class PathFollowerTest(Node):
         # 速度PDゲイン（新規追加: 距離制御用）
         self.dist_e_n = 0.0
         self.dist_e_n1 = 0.0
-        self.k_p_v = 0.8  # 距離に比例した速度定数
-        self.k_d_v = 0.2  # 減速時のブレーキの強さ
+        self.k_p_v = 0.4  # 距離に比例した速度定数
+        self.k_d_v = 0.05  # 減速時のブレーキの強さ
 
         # 自己位置の初期化
         self.position_x = 0.0
@@ -42,7 +42,7 @@ class PathFollowerTest(Node):
 
         # ----- 2. 通信設定 -----
         self.subscription = self.create_subscription(
-            nav_msgs.Odometry, '/fusion/odom', self.get_odom, qos_profile)
+            nav_msgs.Odometry, '/odom', self.get_odom, qos_profile)
         
         self.cmd_vel_publisher = self.create_publisher(
             geometry_msgs.Twist, 'cmd_vel', qos_profile)
