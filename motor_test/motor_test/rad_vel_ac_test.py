@@ -19,9 +19,9 @@ class PathFollowerTest(Node):
         )
 
         # ----- 1. テスト用パラメータの設定 -----
-        self.declare_parameter('test_pos_x', 5.0)
-        self.declare_parameter('test_pos_y', 5.0)
-        self.declare_parameter('max_speed', 1.0)
+        self.declare_parameter('test_pos_x', 10.0)
+        self.declare_parameter('test_pos_y', 10.0)
+        self.declare_parameter('max_speed', 1.5)
 
         # 角度PDゲイン
         self.e_n = 0.0
@@ -32,12 +32,12 @@ class PathFollowerTest(Node):
         # 速度PDゲイン
         self.dist_e_n = 0.0
         self.dist_e_n1 = 0.0
-        self.k_p_v = 0.4
-        self.k_d_v = 0.05
+        self.k_p_v = 0.2
+        self.k_d_v = 0.1
 
         # 加速度リミッタ用の変数（新規追加）
         self.prev_linear_vel = 0.0  # 前回のループでの速度
-        self.accel_limit = 0.01     # 1ループ(0.05s)あたりの速度変化の最大値
+        self.accel_limit = 0.04     # 1ループ(0.05s)あたりの速度変化の最大値
 
         # 自己位置の初期化
         self.position_x = 0.0
