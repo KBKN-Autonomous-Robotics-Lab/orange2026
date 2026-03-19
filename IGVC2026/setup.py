@@ -28,10 +28,15 @@ setup(
             'igvc2026_detection = IGVC2026.igvc2026_detection:main',
             'igvc_control = IGVC2026.igvc_control:main',
             'human_vest_display = IGVC2026.human_vest_display:main',
-            'tire_display = IGVC2026.tire_display:main',
+            'image_display = IGVC2026.image_display:main',
             'stop_sign_display = IGVC2026.stop_sign_display:main',
             'stop_flag = IGVC2026.stop_flag:main',
-
+            'stopflag_test = IGVC2026.stopflag_test:main',
+            'camera_stop = IGVC2026.camera_stop:main',
+            'camera_detection = IGVC2026.camera_detection:main',
+            'path_follower_test = IGVC2026.path_follower_test:main',
+            'tire_detection = IGVC2026.tire_detection:main',
+            'whiteline_test = IGVC2026.whiteline_test:main',
         ],
     },
 )

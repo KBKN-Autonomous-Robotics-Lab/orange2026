@@ -69,12 +69,17 @@ class HumanDetectionCamera(Node):
 
         self.stop_reason = None
         results = self.model(frame, verbose=False)
-        # ================= Human Detection =================
+
+        # ================= Call status =================
         human_status = self.detect_human(frame, results)
         tire_status = self.detect_tire(frame)
         stop_sign_status = self.detect_stop_sign(frame, results)
+        traffic_light_status = self.detect_traffic_light(frame, results)
+
+        # ================= Human Detection =================
         if human_status == "Stop":
             self.stop_reason = "human"
+
         # ================= Tire Detection ================
         elif tire_status == "Stop":
             self.stop_reason = "tire"
@@ -84,11 +89,18 @@ class HumanDetectionCamera(Node):
             if time.time() - self.last_stop_time > 5:
                 self.get_logger().info("Stop sign detected")
                 self.send_stop_sign_action()
-                self.last_stop_time = time.time()
+                #self.last_stop_time = time.time()
+
+        # Bicycle Detection
+
+        if traffic_light_status == "Stop":
+            self.get_logger().info("Traffic light detected")
+            self.send_bicycle_action()
+            
 
         # ================= Final Decision =================
         final_status = "Stop" if (
-            human_status == "Stop" or tire_status == "Stop") else "Go"
+            human_status == "Stop" or tire_status == "Stop" or traffic_light_status == "Stop") else "Go"
         
        
 
@@ -120,9 +132,9 @@ class HumanDetectionCamera(Node):
         
         self.previous_status = final_status
 
-         # 画像表示
-        cv2.imshow("camera", frame)
-        cv2.waitKey(1)
+        # 画像表示
+        #cv2.imshow("camera", frame)
+        #cv2.waitKey(1)
 
     # ==========================================================
     # Individual Detection Methods
@@ -197,7 +209,7 @@ class HumanDetectionCamera(Node):
         # 一度検出したらラッチ
         if stop_sign_detected and not self.stop_sign_latched:
             self.stop_sign_latched = True
-            #self.last_stop_time = time.time()
+            self.last_stop_time = time.time()
             return "Stop"
         # ラッチされていたら常にストップ
         #if self.stop_sign_latched:
@@ -209,6 +221,24 @@ class HumanDetectionCamera(Node):
             stop_sign_status = "Stop"
         """
         return "Go"
+    
+    def detect_traffic_light(self, frame, results):
+        traffic_light_status = "Go"
+        for result in results:
+            for box in result.boxes:
+                cls_id = int(box.cls[0])
+                conf = float(box.conf[0])
+                if cls_id == 10 and conf > 0.5:  # bicycle
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    w, h = x2 - x1, y2 - y1
+                    if w > 50 and h > 200:
+                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                        traffic_light_status = "Stop"
+        
+        
+        
+        return traffic_light_status
+
 
 
 
@@ -245,6 +275,13 @@ class HumanDetectionCamera(Node):
         self.action_client.wait_for_server()
         self.future = self.action_client.send_goal_async(goal_msg, feedback_callback=self.feedback_callback)
         self.future.add_done_callback(self.response_callback)
+
+    def send_bicycle_action(self):
+        goal_msg = StopFlag.Goal()
+        goal_msg.a = 3 #bicycle only
+        self.action_client.wait_for_server()
+        self.future = self.action_client.send_goal_async(goal_msg, feedback_callback=self.feedback_callback)
+        self.future.add_done_callback(self.response_callback)
     
 
 
@@ -268,8 +305,8 @@ class HumanDetectionCamera(Node):
     def result_callback(self, future):
         result = future.result().result
         self.get_logger().info(f"Result: {result.sum}")
-        #if self.stop_sign_latched and (time.time() - self.last_stop_time > 5.0):
-        if result.sum == 999:
+        if self.stop_sign_latched and (time.time() - self.last_stop_time > 5.0):
+        #if result.sum == 999:
             self.stop_sign_latched = False
             self.get_logger().info("Stop sign released")
     
@@ -291,3 +328,14 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
+
+
+
+
+
+
+
+
+                    
+
+

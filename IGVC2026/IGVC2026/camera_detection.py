@@ -2,21 +2,25 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from sensor_msgs.msg import CompressedImage, PointCloud2, PointField
-from std_msgs.msg import String
+from std_msgs.msg import String, Bool
 from collections import deque
 import cv2
 import time
+import easyocr
+import re
+import tkinter as tk
+from threading import Thread
 import numpy as np
 from ultralytics import YOLO
 from rclpy.action import ActionServer
 from rclpy.action import ActionClient
 from my_msgs.action import StopFlag
 
-class HumanDetectionCamera(Node):
+class CameraDetection(Node):
     def __init__(self):
-        super().__init__('detection_camera')
+        super().__init__('camera_detection')
 
-        # ================= QoS =================
+        # qos
         qos = QoSProfile(
             history=HistoryPolicy.KEEP_LAST,
             depth=1,
@@ -24,13 +28,13 @@ class HumanDetectionCamera(Node):
             durability=DurabilityPolicy.VOLATILE
         )
 
-        # ================= Publishers =================
-        self.image_pub = self.create_publisher(CompressedImage, 'camera/image/compressed', qos)
-        self.status_pub = self.create_publisher(String, 'now_status', 10)
-        self.pc_pub = self.create_publisher(PointCloud2, '/tire_points', 1)
-        self.status_publisher = self.create_publisher(String, 'all_status', 10)
-
-        # ================= Camera =================
+        # publihser
+        self.image_publihser = self.create_publisher(CompressedImage, 'camera/image/compressed', qos)
+        self.status_publisher = self.create_publisher(String, 'now_status', 10)
+        # test publisher
+        self.pub = self.create_publisher(Bool, '/simulate_white_line', 10)
+    
+        # camera
         self.cap = cv2.VideoCapture('/dev/sensors/camera', cv2.CAP_V4L2)
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -42,94 +46,112 @@ class HumanDetectionCamera(Node):
             self.get_logger().error("Camera open failed")
             rclpy.shutdown()
 
-        # ================= YOLO =================
-        self.model = YOLO("yolov8n.pt")  # 人・停止標識など検出可能
+        self.reader = easyocr.Reader(['en'])
 
-        # ================= State =================
-        self.tire_detected_queue = deque(maxlen=5)
+        # YOLO (human and stop sign)
+        self.model = YOLO("yolov8n.pt")
+
+        # first status
+        self.tire_detected_queue = deque(maxlen=10)
+        self.human_detected_queue = deque(maxlen=10)
         self.stop_sign_detected_queue = deque(maxlen=5)
         self.stop_sign_detected = False
         self.previous_status = "Go"
         self.stop = True
         self.stop_sign_latched = False
-        self.last_stop_time = 0
-        
+        self.stopsign_stop = False
+        self.previous_stop_sign_status = "Not_detected"
+        self.count = 0
 
-        # ================= Main Loop =================
-        self.create_timer(1.0 / 30.0, self.timer_callback)
 
-        # ================= Action =================
+        # main loop
+        detect_timer = self.create_timer(1.0 / 30.0, self.timer_callback)
+        #sim_timer = self.create_timer(1.0 / 30.0, self.simulate)
+
+        # action
         self.action_client = ActionClient(self, StopFlag, 'stop_flag')
+        self.action_client.wait_for_server()
+
+
+    # test
+    """
+    def simulate(self):
+        msg = Bool()
+        if self.count % 100 == 0:
+            msg.data = True
+            self.pub.publish(msg)
+            self.get_logger().info("Published True to /simulate_white_line")
+            self.get_logger().info(f"/simulate_white_line: {msg}")
+        #time.sleep(5)
+        elif self.count % 100 == 50:
+            msg.data = False
+            self.pub.publish(msg)
+            self.get_logger().info("Published False to /simulate_white_line")
+            self.get_logger().info(f"/simulate_white_line: {msg}")
+        
+        self.count += 1
+        #time.sleep(5)
+    """
+    
 
     def timer_callback(self):
         ret, frame = self.cap.read()
         if not ret:
             return
 
-
-        self.stop_reason = None
         results = self.model(frame, verbose=False)
-        # ================= Human Detection =================
+        self.stop_reason = None
+        # Call status function
         human_status = self.detect_human(frame, results)
-        tire_status = self.detect_tire(frame)
-        stop_sign_status = self.detect_stop_sign(frame, results)
+        stop_sign_status = self.detect_stop_sign_status(frame, results)
+        train_status = self.detect_train(frame, results)
+
         if human_status == "Stop":
             self.stop_reason = "human"
-        # ================= Tire Detection ================
-        elif tire_status == "Stop":
-            self.stop_reason = "tire"
 
-        # ================= Stop Sign Detection =================
-        if stop_sign_status == "Stop":
-            if time.time() - self.last_stop_time > 5:
-                self.get_logger().info("Stop sign detected")
-                self.send_stop_sign_action()
-                self.last_stop_time = time.time()
+        elif stop_sign_status == "Detected":
+            self.stop_reason = "stop_sign"
 
-        # ================= Final Decision =================
+        elif train_status == "Stop":
+            self.stop_reason = "train"
+        
+
+
+                
+
         final_status = "Stop" if (
-            human_status == "Stop" or tire_status == "Stop") else "Go"
-        
-       
+            human_status == "Stop" or train_status == "Stop"
+        ) else "Go"
 
-        # Publish status
-        self.status_pub.publish(String(data=final_status))
+        # publish status
         if final_status != self.previous_status:
-            self.get_logger().info(f'Status: {final_status}')
-        
-        
-        
-        """
-        # stopsignを分けnai場合
-        if final_status == "Stop" and self.previous_status != "Stop":
-            self.stop = True
-            self.send_action_request()
-        """
-        # stopsignを分ける場合
-        if final_status == "Stop" and self.previous_status != "Stop":
+            self.get_logger().info(f'Status: {final_status} stop_reason: {self.stop_reason}')
+
+        # to action
+        if stop_sign_status == "Detected" and self.previous_stop_sign_status != "Detected":
+            self.get_logger().info("Stop sign detected")
+            self.send_stop_sign_action()
+        elif final_status == "Stop" and self.previous_status != "Stop":
             self.stop = True
             self.send_action_request()
 
-        if final_status == "Stop" and self.previous_status == "Stop":
+        elif final_status == "Stop" and self.previous_status == "Stop":
             pass
-            
 
-        if final_status == "Go" and self.previous_status == "Stop":
+        elif final_status == "Go" and self.previous_status == "Stop":
             self.stop = False
             self.send_action_request()
-        
+
         self.previous_status = final_status
+        self.previous_stop_sign_status = stop_sign_status
 
-         # 画像表示
-        cv2.imshow("camera", frame)
-        cv2.waitKey(1)
+        # image display
+        #cv2.imshow("camera", frame)
+        #cv2.waitKey(1)
 
-    # ==========================================================
-    # Individual Detection Methods
-    # ==========================================================
     def detect_human(self, frame, results):
         #results = self.model(frame, verbose=False)
-        status = "Go"
+        human_detected = False
 
         for result in results:
             for box in result.boxes:
@@ -140,9 +162,13 @@ class HumanDetectionCamera(Node):
                     w, h = x2 - x1, y2 - y1
                     if w > 50 and h > 200:
                         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                        status = "Stop"
-        return status
+                        human_detected = True
+        
+        self.human_detected_queue.append(human_detected)
+        status = "Stop" if any(self.human_detected_queue) else "Go"
 
+        return status
+    """
     def detect_tire(self, frame):
         tire_status = "Go"
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -182,70 +208,99 @@ class HumanDetectionCamera(Node):
         if any(self.tire_detected_queue):
             tire_status = "Stop"
         return tire_status
-
-    def detect_stop_sign(self, frame, results):
-        #stop_sign_status = "Go"
+    """
+    """
+    def detect_stop_sign_status(self, frame, results):
         #results = self.model(frame, verbose=False)
         stop_sign_detected = False
+        
 
         for result in results:
             classes = result.boxes.cls.cpu().numpy()
             if any(int(cls) == 11 for cls in classes):
                 stop_sign_detected = True
-                break
-        # ラッチsyori
-        # 一度検出したらラッチ
+        
         if stop_sign_detected and not self.stop_sign_latched:
             self.stop_sign_latched = True
-            #self.last_stop_time = time.time()
-            return "Stop"
-        # ラッチされていたら常にストップ
-        #if self.stop_sign_latched:
-            #stop_sign_status = "Stop"
-        
-        """
+
         self.stop_sign_detected_queue.append(stop_sign_detected)
-        if any(self.stop_sign_detected_queue):
-            stop_sign_status = "Stop"
-        """
-        return "Go"
+        status = "Detected" if any(self.stop_sign_detected_queue) else "Not_detected"
+    
+        return status
+    """
+    def detect_stop_sign_status(self, frame, results):
+        stop_sign_detected = False
+        for result in results:
+            for box in result.boxes:
+                cls_id = int(box.cls[0])
+                conf = float(box.conf[0])
+                if cls_id == 11 and conf > 0.3:
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    w, h = x2 - x1, y2 - y1
+                    if w * h > 2000:
+                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    
+                    if frame is not None:
+                        ocr_results = self.reader.readtext(frame)
 
+                        for (bbox, text, confidence) in ocr_results:
+                            normalized_text = re.sub(r'[^a-z]', '', text.strip().lower())
+                            if len(normalized_text) != 4:
+                                continue
+                            self.get_logger().info(f'OCR検出結果: {text} → 正規化: {normalized_text} (信頼度: {confidence:.2f})')
 
+                            if normalized_text == "stop" and confidence > 0.8:
+                                stop_sign_detected = True
+                    else:
+                        stop_sign_detected = False
+        
+        self.stop_sign_detected_queue.append(stop_sign_detected)
+        status = "Detected" if any(self.stop_sign_detected_queue) else "Not_detected"
+    
+        return status
+        
 
+    
+    def detect_train(self, frame, results):
+        train_status = "Go"
+        for result in results:
+            for box in result.boxes:
+                cls_id = int(box.cls[0])
+                conf = float(box.conf[0])
+                if cls_id == 6 and conf > 0.5:  # train
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    w, h = x2 - x1, y2 - y1
+                    if w > 50 and h > 200:
+                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                        train_status = "Stop"
+        
+        
+        
+        return train_status
+    
     def delayed_action_send(self):
         self.send_action_request()
-    
+
     # stop_reasonがNot stop_signサーバーにアクションを送信する関数
     def send_action_request(self):
         goal_msg = StopFlag.Goal()
         
-        # stop変数の状態でaの値を決定
-        if self.stop: # True
-            goal_msg.a = 1  # stop (stop_reason = human and tire)
-        else: # False
-            goal_msg.a = 0  # go
-            
-        # traffic_action変数の状態でbの値を決定
-        #if self.traffic_action:
-        #    goal_msg.b = 0  # start judge
-        #else:
-        #    goal_msg.b = 1  # 
+        if self.stop:
+            goal_msg.a = 1
 
-        # アクションサーバーが利用可能になるまで待機
+        else:
+            goal_msg.a = 0
+
         self.action_client.wait_for_server()
-
-        # アクションを非同期で送信
         self.future = self.action_client.send_goal_async(goal_msg, feedback_callback=self.feedback_callback)
         self.future.add_done_callback(self.response_callback)
 
-    # stop_reasonがstop_signのときのサーバーにアクションを送信する関数
     def send_stop_sign_action(self):
         goal_msg = StopFlag.Goal()
         goal_msg.a = 2   # stop sign special code
-        self.action_client.wait_for_server()
-        self.future = self.action_client.send_goal_async(goal_msg, feedback_callback=self.feedback_callback)
-        self.future.add_done_callback(self.response_callback)
-    
+        #self.action_client.wait_for_server()
+        future = self.action_client.send_goal_async(goal_msg, feedback_callback=self.feedback_callback)
+        future.add_done_callback(self.response_callback)
 
 
     # フィードバックを受け取るコールバック関数
@@ -273,21 +328,23 @@ class HumanDetectionCamera(Node):
             self.stop_sign_latched = False
             self.get_logger().info("Stop sign released")
     
-
+    
+    
 
 def main(args=None):
     rclpy.init(args=args)
-    node = HumanDetectionCamera()
+    node = CameraDetection()
     try:
         rclpy.spin(node)
+    
     except KeyboardInterrupt:
         pass
+
     finally:
         node.cap.release()
         cv2.destroyAllWindows()
         node.destroy_node()
         rclpy.shutdown()
-
 
 if __name__ == '__main__':
     main()

@@ -48,11 +48,11 @@ class HumanDetectionCamera(Node):
         # ================= State =================
         self.tire_detected_queue = deque(maxlen=5)
         self.stop_sign_detected_queue = deque(maxlen=5)
-        self.stop_sign_detected = False
+        #self.stop_sign_detected = False
         self.previous_status = "Go"
         self.stop = True
         self.stop_sign_latched = False
-        self.last_stop_time = 0
+        #self.last_stop_time = 0
         
 
         # ================= Main Loop =================
@@ -80,15 +80,12 @@ class HumanDetectionCamera(Node):
             self.stop_reason = "tire"
 
         # ================= Stop Sign Detection =================
-        if stop_sign_status == "Stop":
-            if time.time() - self.last_stop_time > 5:
-                self.get_logger().info("Stop sign detected")
-                self.send_stop_sign_action()
-                self.last_stop_time = time.time()
+        elif stop_sign_status == "Stop":
+            self.stop_reason = "stop_sign"
 
         # ================= Final Decision =================
         final_status = "Stop" if (
-            human_status == "Stop" or tire_status == "Stop") else "Go"
+            human_status == "Stop" or tire_status == "Stop" or stop_sign_status == "Stop") else "Go"
         
        
 
@@ -107,8 +104,12 @@ class HumanDetectionCamera(Node):
         """
         # stopsignを分ける場合
         if final_status == "Stop" and self.previous_status != "Stop":
-            self.stop = True
-            self.send_action_request()
+            if self.stop_reason == "stop_sign":
+                self.send_stop_sign_action()
+            
+            else:
+                self.stop = True
+                self.send_action_request()
 
         if final_status == "Stop" and self.previous_status == "Stop":
             pass
@@ -184,7 +185,7 @@ class HumanDetectionCamera(Node):
         return tire_status
 
     def detect_stop_sign(self, frame, results):
-        #stop_sign_status = "Go"
+        stop_sign_status = "Go"
         #results = self.model(frame, verbose=False)
         stop_sign_detected = False
 
@@ -195,20 +196,19 @@ class HumanDetectionCamera(Node):
                 break
         # ラッチsyori
         # 一度検出したらラッチ
-        if stop_sign_detected and not self.stop_sign_latched:
+        if stop_sign_detected:
             self.stop_sign_latched = True
-            #self.last_stop_time = time.time()
             return "Stop"
         # ラッチされていたら常にストップ
-        #if self.stop_sign_latched:
-            #stop_sign_status = "Stop"
+        if self.stop_sign_latched:
+            stop_sign_status = "Stop"
         
         """
         self.stop_sign_detected_queue.append(stop_sign_detected)
         if any(self.stop_sign_detected_queue):
             stop_sign_status = "Stop"
         """
-        return "Go"
+        return stop_sign_status
 
 
 
@@ -268,7 +268,7 @@ class HumanDetectionCamera(Node):
     def result_callback(self, future):
         result = future.result().result
         self.get_logger().info(f"Result: {result.sum}")
-        #if self.stop_sign_latched and (time.time() - self.last_stop_time > 5.0):
+
         if result.sum == 999:
             self.stop_sign_latched = False
             self.get_logger().info("Stop sign released")
