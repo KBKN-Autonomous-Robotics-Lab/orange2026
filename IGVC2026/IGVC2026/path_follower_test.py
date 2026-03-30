@@ -59,7 +59,7 @@ class StopFlagActionServer(Node):
             # stop sign goal は常に処理
             # ここで白線認識し、停止信号を出す予定。
             while rclpy.ok():
-                if self.white_line_detected:
+                if a == 3:
                     self.get_logger().info("white line detected")
                     result.sum = 999
                     goal_handle.succeed()

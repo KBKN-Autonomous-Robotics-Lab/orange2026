@@ -37,8 +37,10 @@ class PathFollower(Node):
         )
 
         # actionサーバーの生成(tuika)
-        self.server = ActionServer(self,
-            StopFlag, "stop_flag", self.listener_callback)
+        #self.server = ActionServer(self, StopFlag, "stop_flag", self.listener_callback)
+
+        # actionサーバーの生成(henkou)
+        self.server = ActionServer(self, StopFlag, "stop_flag", execute_callback=self.listener_callback)
         
         # Subscriptionを作成。
         self.subscription = self.create_subscription(nav_msgs.Path, '/potential_astar_path', self.get_path, qos_profile) #set subscribe pcd topic name
@@ -181,8 +183,53 @@ class PathFollower(Node):
         self.previous_status = None    
         self.human_status = None    
         ##################################################################
-        
-    # actionリクエストの受信時に呼ばれる(tuika)
+    
+    def listener_callback(self, goal_handle):
+        a = goal_handle.request.a
+        b = goal_handle.request.b
+        self.get_logger().info(f"Received goal with a: {a}, b: {b}")
+
+        result = StopFlag.Result()
+
+        # -------------------------
+        # stop sign goal
+        # -------------------------
+        if a == 2:
+            self.get_logger().info("Stop sign mode start")
+            # stop sign goal は常に処理
+            # ここで白線認識し、停止信号を出す予定。
+            detected = self.detect_white_line()
+            if detected:
+                self.get_logger().info("white line detected")
+                result.sum = 999
+
+            else:
+                self.get_logger().info("white line not detected")
+                
+            #result.sum = 999
+            goal_handle.succeed()
+            return result
+
+        else:
+            self.get_logger().info("Human or Tire goal received")
+            result.sum = a + b
+            goal_handle.succeed()
+
+        return result
+
+        # -------------------------
+        # その他の goal
+        # -------------------------
+    
+    # action test (tuika)
+    def detect_white_line(self):
+        self.get_logger().info("Dummy white line detection running")
+        return False
+
+
+
+    """
+    # actionリクエストの受信時に呼ばれる(tuika) (tuika -> test_handle)
     def listener_callback(self, goal_handle):
         self.get_logger().info(f"Received goal with a: {goal_handle.request.a}, b: {goal_handle.request.b}")
         
@@ -191,41 +238,50 @@ class PathFollower(Node):
         # クライアントから送られたaをstop_flagに代入
         if goal_handle.request.a == 2:
             self.get_logger().info("Stop sign mode start")
+            #if goal_handle.request.a == 3:
+                
+            # program test
+            #self.test_stop_flag = test_handle.request.a
+            #print(f"test_stop_flag set to: {self.test_stop_flag}")
 
-            # 停止線認識開始
-            time.sllep(2) # 仮の白線認識
-            #self.detect_white_line()
-            self.get_logger().info("White line stop completed")
+            self.get_logger().info("Bicycle stop completed")
+            goal_handle.succeed()
+            result = StopFlag.Result()
+            result.sum = 999
+            return result
 
+    
         # フィードバックの返信
-        feedback = StopFlag.Feedback()
-        feedback.rate = 0.1
-        goal_handle.publish_feedback(feedback)
+        #goal_handle.accept()
+        #feedback = StopFlag.Feedback()
+        #feedback.rate = 0.1
+        #goal_handle.publish_feedback(feedback)
 
         goal_handle.succeed()
         result = StopFlag.Result()
 
-        result.sum = 999
+        result.sum = goal_handle.request.a + goal_handle.request.b
 
         return result
+    """
 
 
         
-        """
+      
         # フィードバックの返信
-        for i in range(1):
-            feedback = StopFlag.Feedback()
-            feedback.rate = i * 0.1
-            goal_handle.publish_feedback(feedback)
+        #for i in range(1):
+            #feedback = StopFlag.Feedback()
+            #feedback.rate = i * 0.1
+            #goal_handle.publish_feedback(feedback)
             #time.sleep(0.5)
 
         
         # レスポンスの返信
-        goal_handle.succeed()
-        result = StopFlag.Result()
-        result.sum = goal_handle.request.a + goal_handle.request.b  # 結果の計算
-        return result   
-        """      
+        #goal_handle.succeed()
+        #result = StopFlag.Result()
+        #result.sum = goal_handle.request.a + goal_handle.request.b  # 結果の計算
+        #return result   
+          
         
     def get_path(self, msg):
         #self.get_logger().info('Received path with %d waypoints' % len(msg.poses))

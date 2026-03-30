@@ -53,15 +53,21 @@ class CameraDetection(Node):
 
         # first status
         self.tire_detected_queue = deque(maxlen=10)
+        self.current_human_state = "Go"
         self.human_detected_queue = deque(maxlen=10)
         self.stop_sign_detected_queue = deque(maxlen=5)
+        self.yellow_line_detected_queue = deque(maxlen=5)
         self.stop_sign_detected = False
         self.previous_status = "Go"
         self.stop = True
         self.stop_sign_latched = False
         self.stopsign_stop = False
         self.previous_stop_sign_status = "Not_detected"
+        self.previous_line_status = "None"
         self.count = 0
+        self.last_stop_time = 0.0
+
+        
 
 
         # main loop
@@ -101,11 +107,13 @@ class CameraDetection(Node):
 
         results = self.model(frame, verbose=False)
         self.stop_reason = None
+
         # Call status function
         human_status = self.detect_human(frame, results)
         stop_sign_status = self.detect_stop_sign_status(frame, results)
         train_status = self.detect_train(frame, results)
-
+        line_status = self.detect_yellow_line(frame)
+        
         if human_status == "Stop":
             self.stop_reason = "human"
 
@@ -114,13 +122,34 @@ class CameraDetection(Node):
 
         elif train_status == "Stop":
             self.stop_reason = "train"
+
+        now = time.time()
+        
+
+        if human_status == "Stop":
+            self.current_human_state = "Stop"
+            self.last_stop_time = now
+
+        else:
+            if self.current_human_state == "Stop":
+                if now - self.last_stop_time > 2.0:
+                    self.current_human_state = "Go"
+
+                else:
+                    pass
+
+            else:
+                self.current_human_state = "Go"
+        
+
+
         
 
 
                 
 
         final_status = "Stop" if (
-            human_status == "Stop" or train_status == "Stop"
+            self.current_human_state == "Stop" or train_status == "Stop"
         ) else "Go"
 
         # publish status
@@ -131,6 +160,11 @@ class CameraDetection(Node):
         if stop_sign_status == "Detected" and self.previous_stop_sign_status != "Detected":
             self.get_logger().info("Stop sign detected")
             self.send_stop_sign_action()
+        
+        elif line_status == "Detected" and self.previous_line_status != "Detected":
+            self.get_logger().info("yellow_line_detected")
+            self.send_yellow_line_action()
+            
         elif final_status == "Stop" and self.previous_status != "Stop":
             self.stop = True
             self.send_action_request()
@@ -144,6 +178,7 @@ class CameraDetection(Node):
 
         self.previous_status = final_status
         self.previous_stop_sign_status = stop_sign_status
+        self.previous_line_status = line_status
 
         # image display
         #cv2.imshow("camera", frame)
@@ -273,10 +308,43 @@ class CameraDetection(Node):
                     if w > 50 and h > 200:
                         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                         train_status = "Stop"
-        
-        
-        
         return train_status
+
+    # stopsign test
+    def detect_yellow_line(self, frame):
+        line_status = False
+        yellow_blur = cv2.GaussianBlur(frame, (5, 5), 0)
+        lower_yellow = np.array([0, 100, 100])
+        upper_yellow = np.array([80, 255, 255])
+        yellow_mask = cv2.inRange(yellow_blur, lower_yellow, upper_yellow)
+        yellow_edges = cv2.Canny(yellow_mask, 50, 150) 
+        h, w = yellow_edges.shape 
+        mask_yellow = np.zeros_like(yellow_edges) 
+        cv2.rectangle(mask_yellow, (0, int(h*0.6)), (w, h), 255, -1) 
+        yellow_edges = cv2.bitwise_and(yellow_edges, mask_yellow)
+
+        yellow_lines = cv2.HoughLinesP(
+            yellow_edges,
+            rho=1,
+            theta=np.pi/180,
+            threshold=50,
+            minLineLength=50,
+            maxLineGap=30
+        )
+
+        if yellow_lines is not None and len(yellow_lines) > 0:
+            line_status = True
+            
+        else:
+            line_status = False
+
+        self.yellow_line_detected_queue.append(line_status)    
+        status = "Detected" if any(self.stop_sign_detected_queue) else "Not_detected"
+ 
+        
+        
+        
+        return 
     
     def delayed_action_send(self):
         self.send_action_request()
@@ -299,6 +367,13 @@ class CameraDetection(Node):
         goal_msg = StopFlag.Goal()
         goal_msg.a = 2   # stop sign special code
         #self.action_client.wait_for_server()
+        future = self.action_client.send_goal_async(goal_msg, feedback_callback=self.feedback_callback)
+        future.add_done_callback(self.response_callback)
+    
+    # stopsign test
+    def send_yellow_line_action(self):
+        goal_msg = StopFlag.Goal()
+        goal_msg.a = 3
         future = self.action_client.send_goal_async(goal_msg, feedback_callback=self.feedback_callback)
         future.add_done_callback(self.response_callback)
 

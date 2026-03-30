@@ -66,7 +66,7 @@ class TireDetect(Node):
         # mask
         #mask = edges.copy()
         
-        _, mask = cv2.threshold(hsv, 50, 255, cv2.THRESH_BINARY)
+        #_, mask = cv2.threshold(hsv, 50, 255, cv2.THRESH_BINARY)
 
         contours, hierarchy = cv2.findContours(
             mask_clean, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -103,7 +103,7 @@ class TireDetect(Node):
             (xc, yc), radius = cv2.minEnclosingCircle(cnt)
             xc_global = int(xc)
             yc_global = int(yc + int(frame_h*0.5))
-            cv2.circle(frame, (int(xc), int(yc)), int(radius), (0, 255, 0), 2)
+            cv2.circle(frame, (int(xc), yc_global), int(radius), (0, 255, 0), 2)
 
 
         

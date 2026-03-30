@@ -36,7 +36,9 @@ setup(
             'camera_detection = IGVC2026.camera_detection:main',
             'path_follower_test = IGVC2026.path_follower_test:main',
             'tire_detection = IGVC2026.tire_detection:main',
-            'whiteline_test = IGVC2026.whiteline_test:main',
+            'whiteline = IGVC2026.whiteline:main',
+            'human_detection = IGVC2026.human_detection:main',
+        
         ],
     },
 )
