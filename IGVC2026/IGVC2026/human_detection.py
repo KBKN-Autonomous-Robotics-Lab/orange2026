@@ -21,7 +21,7 @@ class HumanDetection(Node):
         super().__init__('human_detection')
 
         # camera
-        self.cap = cv2.VideoCapture('/dev/sensors/camera', cv2.CAP_V4L2)
+        self.cap = cv2.VideoCapture('/dev/camera', cv2.CAP_V4L2)
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -103,7 +103,7 @@ class HumanDetection(Node):
 
     def detect_human(self, frame, results):
         human_detected = False
-        K = 950 # キャリブレーション K = h * distance
+        K = 900 # キャリブレーション K = h * distance
         # K = 800で人からの停止位置1.9m前後 K > 800 good
 
         for result in results:
@@ -127,14 +127,14 @@ class HumanDetection(Node):
                         if h >= 475:
                             human_h = h + 5
                             distance = K / human_h
-                            self.get_logger().info(f'h={human_h}, distance={distance}')
+                            #self.get_logger().info(f'h={human_h}, distance={distance}')
                             if 1.5 <= distance <= 2.0:
                                 human_detected = True
 
                         elif h < 475:
                             human_h = h - 10
                             distance = K / human_h
-                            self.get_logger().info(f'h={human_h}, distance={distance}')
+                            #self.get_logger().info(f'h={human_h}, distance={distance}')
                             if 1.5 <= distance <= 2.0:
                                 human_detected = True
 
