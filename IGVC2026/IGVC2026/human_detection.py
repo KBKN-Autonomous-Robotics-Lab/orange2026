@@ -69,7 +69,7 @@ class HumanDetection(Node):
             
         else:
             if self.current_state == "Stop":
-                if now - self.last_stop_time > 2.0:
+                if now - self.last_stop_time > 5.0:
                     self.current_state = "Go"
 
                 else:
@@ -103,7 +103,7 @@ class HumanDetection(Node):
 
     def detect_human(self, frame, results):
         human_detected = False
-        K = 900 # キャリブレーション K = h * distance
+        K = 950 # キャリブレーション K = h * distance
         # K = 800で人からの停止位置1.9m前後 K > 800 good
 
         for result in results:
@@ -128,14 +128,14 @@ class HumanDetection(Node):
                             human_h = h + 5
                             distance = K / human_h
                             #self.get_logger().info(f'h={human_h}, distance={distance}')
-                            if 1.5 <= distance <= 2.0:
+                            if 1.5 <= distance <= 2.3:
                                 human_detected = True
 
                         elif h < 475:
                             human_h = h - 10
                             distance = K / human_h
                             #self.get_logger().info(f'h={human_h}, distance={distance}')
-                            if 1.5 <= distance <= 2.0:
+                            if 1.5 <= distance <= 2.3:
                                 human_detected = True
 
 

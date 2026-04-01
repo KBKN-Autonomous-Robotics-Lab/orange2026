@@ -196,6 +196,7 @@ class PathFollower(Node):
         # -------------------------
         if a == 2:
             self.get_logger().info("Stop sign mode start")
+            self.stop_flag = goal_handle.request.a
             # stop sign goal は常に処理
             # ここで白線認識し、停止信号を出す予定。
             detected = self.detect_white_line()
@@ -212,6 +213,7 @@ class PathFollower(Node):
 
         else:
             self.get_logger().info("Human or Tire goal received")
+            self.stop_flag = goal_handle.request.a
             result.sum = a + b
             goal_handle.succeed()
 
