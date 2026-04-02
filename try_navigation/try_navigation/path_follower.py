@@ -45,10 +45,10 @@ class PathFollower(Node):
         # Subscriptionを作成。
         self.subscription = self.create_subscription(nav_msgs.Path, '/potential_astar_path', self.get_path, qos_profile) #set subscribe pcd topic name
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_odom, qos_profile_sub)
-        self.subscription = self.create_subscription(nav_msgs.Odometry,'/fusion/odom', self.get_odom, qos_profile_sub)
+        self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom', self.get_odom, qos_profile_sub)
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom_ekf_match', self.get_odom, qos_profile_sub)
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom_ref_slam', self.get_odom_ref, qos_profile_sub)
-        self.subscription = self.create_subscription(nav_msgs.Odometry,'/fusion/odom', self.get_odom_ref, qos_profile_sub)
+        self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom', self.get_odom_ref, qos_profile_sub)
         self.subscription = self.create_subscription(sensor_msgs.PointCloud2, '/pcd_segment_obs', self.obs_steer, qos_profile)
         self.goal_sub = self.create_subscription(PoseStamped, '/goal_pose', self.goal_pose_callback, qos_profile)
         self.stop_sub = self.create_subscription(String, '/stop_sign_status', self.stop_sign_callback, 10)
@@ -87,11 +87,14 @@ class PathFollower(Node):
         self.target_dist_near = 0.4
         self.stop_flag = 1
         
+        # test speed pd
+        #self.last_speed = 0
+        
         #pd init
         self.e_n = 0;
         self.e_n1 = 0;
-        self.k_p = 0.6;
-        self.k_d = 0.3;
+        self.k_p = 0.6; # 0.6
+        self.k_d = 0.3; # 0.3
         
         self.stop_xy_test = [8, 10, -10, 10]
         self.stop_xy_test_flag = 1
@@ -190,13 +193,14 @@ class PathFollower(Node):
         self.get_logger().info(f"Received goal with a: {a}, b: {b}")
 
         result = StopFlag.Result()
-
+        self.stop_flag = goal_handle.request.a
+        self.get_logger().info(f"STOP Flag: {self.stop_flag}")
         # -------------------------
         # stop sign goal
         # -------------------------
         if a == 2:
             self.get_logger().info("Stop sign mode start")
-            self.stop_flag = goal_handle.request.a
+            #self.stop_flag = goal_handle.request.a
             # stop sign goal は常に処理
             # ここで白線認識し、停止信号を出す予定。
             detected = self.detect_white_line()
@@ -213,7 +217,7 @@ class PathFollower(Node):
 
         else:
             self.get_logger().info("Human or Tire goal received")
-            self.stop_flag = goal_handle.request.a
+            #self.stop_flag = goal_handle.request.a
             result.sum = a + b
             goal_handle.succeed()
 
@@ -571,6 +575,7 @@ class PathFollower(Node):
                 if self.time_restart_count < 0:
                     self.time_restart = 0
                     self.stop_flag = 0
+        
         #################################################################################
         
         
@@ -582,7 +587,24 @@ class PathFollower(Node):
         target_theta = target_theta +90/180*math.pi
         target_rad_pd = self.sensim0(target_rad)
         #target_rad_pd = target_rad
+        #target_speed_pd = self.sensim0(speed)
+        """
+        ##################### 20260401 test speed pd #####################
+        target_speed = speed - self.last_speed
+        target_speed_pd = self.sensim0(target_speed) 
         
+        print("!!!!!!!!!!!speed!!!!!!!!!!!!!!!") 
+        print(speed) 
+        if target_speed > 0: 
+            test_speed = self.last_speed + target_speed_pd # * 0.05
+            print("!!!!!!!!!!!accel!!!!!!!!!!!!!!!") 
+            print(test_speed) 
+        else: 
+            test_speed = self.last_speed + target_speed_pd # * 0.05
+            print("!!!!!!!!!!!decel!!!!!!!!!!!!!!!") 
+            print(test_speed)
+        ###################################################################
+        """
         #make msg
         twist_msg = geometry_msgs.Twist()
         #check stop flag
@@ -597,6 +619,14 @@ class PathFollower(Node):
         
         self.cmd_vel_publisher.publish(twist_msg)
         #self.get_logger().info('Publishing cmd_vel: linear.x = %f, angular.z = %f : %f deg' % (twist_msg.linear.x, twist_msg.angular.z, math.degrees(twist_msg.angular.z)))
+        ##################### 20250401 test speed pd #####################
+        #print("!!!!!!!!!!!target_speed_pd!!!!!!!!!!!!!!!") 
+        #print(target_speed_pd)
+        #self.last_speed = test_speed
+        #print("!!!!!!!!!!!last_speed!!!!!!!!!!!!!!!") 
+        #print(self.last_speed)
+        ###################################################################
+        
         
     def set_target_rad(self, path, position_x, position_y, target_dist, theta_x, theta_y, theta_z):
         path_x_diff = path[0,:] - position_x
