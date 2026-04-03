@@ -48,7 +48,7 @@ class HumanDetection(Node):
         self.last_stop_time = 0.0
         self.previous_status = "Go"
         self.stop = False
-        self.human_detected_queue = deque(maxlen=5)
+        self.human_detected_queue = deque(maxlen=10)
 
     def timer_callback(self):
         ret, frame = self.cap.read()
@@ -128,14 +128,14 @@ class HumanDetection(Node):
                             human_h = h + 5
                             distance = K / human_h
                             #self.get_logger().info(f'h={human_h}, distance={distance}')
-                            if 1.5 <= distance <= 2.3:
+                            if 1.5 <= distance <= 2.6:
                                 human_detected = True
 
                         elif h < 475:
                             human_h = h - 10
                             distance = K / human_h
                             #self.get_logger().info(f'h={human_h}, distance={distance}')
-                            if 1.5 <= distance <= 2.3:
+                            if 1.5 <= distance <= 2.6:
                                 human_detected = True
 
 
