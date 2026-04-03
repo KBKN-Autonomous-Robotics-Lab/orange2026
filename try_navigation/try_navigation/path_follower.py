@@ -144,6 +144,7 @@ class PathFollower(Node):
         self.obs_points = np.array([[],[],[],[]])
         self.rh_obs = 0
         self.lh_obs = 0
+        self.human_obs_flag = 0
         
         
         ################# IGVC SelfDrive Quolification line stop test #20250530# #################
@@ -194,11 +195,21 @@ class PathFollower(Node):
 
         result = StopFlag.Result()
         self.stop_flag = goal_handle.request.a
-        self.get_logger().info(f"STOP Flag: {self.stop_flag}")
+        
         # -------------------------
         # stop sign goal
         # -------------------------
-        if a == 2:
+        if a == 3:
+            self.get_logger().info("camera detect human")
+            if self.human_obs_flag == 1:
+                self.get_logger().info("Lidar detect human")
+                self.stop_flag = 1
+                
+            goal_handle.succeed()
+
+            return result
+
+        elif a == 2:
             self.get_logger().info("Stop sign mode start")
             #self.stop_flag = goal_handle.request.a
             # stop sign goal は常に処理
@@ -729,6 +740,15 @@ class PathFollower(Node):
             self.lh_obs = 1
         else:
             self.lh_obs = 0
+
+        # tsuika(Tanaka)
+        self.human_obs = self.pcd_serch(points, 1.5, 2, -1.0, 1.0)
+        if np.any(self.human_obs):
+            self.human_obs_flag = 1
+        else:
+            self.human_obs_flag = 0
+
+
 
     def pcd_serch(self, pointcloud, x_min, x_max, y_min, y_max):
         pcd_ind = (( (x_min <= pointcloud[0,:]) * (pointcloud[0,:] <= x_max)) * ((y_min <= pointcloud[1,:]) * (pointcloud[1,:]) <= y_max ) )
