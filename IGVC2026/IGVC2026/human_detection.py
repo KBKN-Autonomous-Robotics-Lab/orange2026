@@ -162,7 +162,7 @@ class HumanDetection(Node):
         goal_msg = StopFlag.Goal()
         
         if self.stop:
-            goal_msg.a = 1
+            goal_msg.a = 3
 
         else:# rclpy (ROS 2のpythonクライアント)の機能を使えるようにします。
 
