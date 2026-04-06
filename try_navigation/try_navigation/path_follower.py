@@ -157,7 +157,7 @@ class PathFollower(Node):
             
         ################# IGVC SelfDrive V.2 function test #20250601# #################
         self.sd_human_stop = 0 #root flag
-        self.sd_human_stop_dist = 0.305*6 + 0.0254*2 + 0.4 + 0.87# 6feat + 2inch +top +delay
+        self.sd_human_stop_dist = 0.305*6 + 0.0254*2 + 0.3 + 0.0# 6feat + 2inch +top +delay
         self.sd_c_obs_stop_dist_buff = self.sd_c_obs_stop_dist
         if self.sd_human_stop == 1:
             self.sd_c_obs_stop_dist = self.sd_human_stop_dist 

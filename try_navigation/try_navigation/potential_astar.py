@@ -117,7 +117,7 @@ class PotentialAStar(Node):
         self.waypoint_xy = np.array([[10],[0],[0]])
         self.waypoint_number = 0
         self.pothole_number = 0 #functions test
-        self.white_number = 1 # front stop:1 lanechange:0 Q1:0 
+        self.white_number = 0 # front stop:1 lanechange:0 Q1:0 
         self.right_number = 0 # front stop:0 lanechange:1 Q1:0
         self.left_number = 0 # front stop:None lanechange:1 Q1:0
         self.dot_number = 0 # front stop:0 lanechange:0 Q1:0
@@ -138,7 +138,7 @@ class PotentialAStar(Node):
         self.dot_obs_points = np.array([[],[],[]])
         
         #DRIVE MODE
-        self.functions_test = 1 #autonav:1 selfdrive:0
+        self.functions_test = 0 #autonav:1 selfdrive:0
         
         #obs info for SELF DRIVE
         self.tire_info      = 0
