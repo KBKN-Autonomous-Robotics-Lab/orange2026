@@ -43,10 +43,10 @@ class PathFollower(Node):
         # Subscriptionを作成。
         self.subscription = self.create_subscription(nav_msgs.Path, '/potential_astar_path', self.get_path, qos_profile) #set subscribe pcd topic name
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_odom, qos_profile_sub)
-        self.subscription = self.create_subscription(nav_msgs.Odometry,'/fusion/odom', self.get_odom, qos_profile_sub)
+        self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_odom, qos_profile_sub)
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom_ekf_match', self.get_odom, qos_profile_sub)
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom_ref_slam', self.get_odom_ref, qos_profile_sub)
-        self.subscription = self.create_subscription(nav_msgs.Odometry,'/fusion/odom', self.get_odom_ref, qos_profile_sub)
+        self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_odom_ref, qos_profile_sub)
         self.subscription = self.create_subscription(sensor_msgs.PointCloud2, '/pcd_segment_obs', self.obs_steer, qos_profile)
         self.goal_sub = self.create_subscription(PoseStamped, '/goal_pose', self.goal_pose_callback, qos_profile)
         self.stop_sub = self.create_subscription(String, '/stop_sign_status', self.stop_sign_callback, 10)
@@ -280,7 +280,7 @@ class PathFollower(Node):
         
         #set speed
         
-        speed_set = 1.10#55 AutoNav 1.10
+        speed_set = 0.55#55 AutoNav 1.10
         speed = speed_set
         
         ################# IGVC SelfDrive Full #20250601# #################
