@@ -38,7 +38,7 @@ setup(
             'tire_detection = IGVC2026.tire_detection:main',
             'whiteline = IGVC2026.whiteline:main',
             'human_detection = IGVC2026.human_detection:main',
-        
+            'tire_display = IGVC2026.tire_display:main',
         ],
     },
 )
