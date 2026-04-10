@@ -13,11 +13,11 @@ class lonlat_To_Odom(Node):
         super().__init__('gps_data_acquisition')
 
         self.declare_parameter('Position_magnification', 1.675)
-        # self.declare_parameter('heading', 180)
+        self.declare_parameter('heading', 0.0)
 
         self.Position_magnification = self.get_parameter(
             'Position_magnification').get_parameter_value().double_value
-        # self.theta = self.get_parameter('heading').get_parameter_value().double_value
+        self.theta = self.get_parameter('heading').get_parameter_value().double_value
 
         self.movingase_sub = self.create_subscription(
             Imu, "movingbase/quat", self.movingbase_callback, 1)
@@ -35,7 +35,7 @@ class lonlat_To_Odom(Node):
         self.latitude = None
         self.longitude = None
         self.satelites = None
-        self.theta = None
+        #self.theta = None
 
         self.timer = self.create_timer(1.0 / 3.0, self.publish_lonlat_to_odom)
 
@@ -49,7 +49,8 @@ class lonlat_To_Odom(Node):
 
     def movingbase_callback(self, msg):
         if self.count == 0:
-            self.theta = msg.orientation_covariance[0]
+            #self.theta = msg.orientation_covariance[0]
+            self.theta = 0.0 # 180.0?
             self.count = 1
 
     def conversion(self, coordinate, origin, theta):
@@ -111,8 +112,8 @@ class lonlat_To_Odom(Node):
         r_theta = theta * degree_to_radian
         h_x = math.cos(r_theta) * gps_x - math.sin(r_theta) * gps_y
         h_y = math.sin(r_theta) * gps_x + math.cos(r_theta) * gps_y
-        point = (-h_y, h_x)
-        # point = (h_y, -h_x)
+        #point = (-h_y, h_x)
+        point = (h_y, -h_x)
 
         return point
 
