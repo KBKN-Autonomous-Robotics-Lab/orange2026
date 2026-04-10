@@ -90,6 +90,8 @@ class PathFollower(Node):
         self.k_p = 0.6;
         self.k_d = 0.3;
         
+        self.target_rad_buff = 0.0
+        
         self.stop_xy_test = [8, 10, -10, 10]
         self.stop_xy_test_flag = 1
         
@@ -481,7 +483,9 @@ class PathFollower(Node):
         #    speed = 0.2
         #self.get_logger().info('speed = %f' % (speed))
         target_theta = target_theta +90/180*math.pi
-        target_rad_pd = self.sensim0(target_rad)
+        target_rad_pd = self.sensim0(target_rad, self.target_rad_buff)
+        self.target_rad_buff = target_rad_pd
+        
         #target_rad_pd = target_rad
         
         #make msg
@@ -532,11 +536,9 @@ class PathFollower(Node):
         self.theta_y = 0 #pitch /math.pi*180
         self.theta_z = yaw /math.pi*180
         
-    def sensim0(self, steering):
-        self.e_n = steering
-        steering = (self.k_p * self.e_n + self.k_d*(self.e_n - self.e_n1))
-        self.e_n1 = self.e_n
-        return steering
+    def sensim0(self, e_n, e_n1):
+        e_n = (self.k_p * e_n + self.k_d*(e_n - e_n1))
+        return e_n
     
     def get_odom_ref(self, msg):
         self.ref_position_x = msg.pose.pose.position.x
