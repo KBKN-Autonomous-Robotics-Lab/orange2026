@@ -136,7 +136,9 @@ class SignDetection(Node):
 
         if frame is not None:
             ocr_results = self.reader.readtext(frame)
-
+            #margin = 10
+            #cropped = frame[y1-margin:y2+margin, x1-margin:x2+margin]
+            #ocr_results = self.reader.readtext(cropped)
             for (bbox, text, confidence) in ocr_results:
                 normalized_text = re.sub(r'[^a-z]', '', text.strip().lower())
                 # 4文字でないものは無視
@@ -146,7 +148,7 @@ class SignDetection(Node):
                 self.get_logger().info(f'OCR検出結果: {text} → 正規化: {normalized_text} (信頼度: {confidence:.2f})')
 
                 if normalized_text == "stop" and confidence > 0.8:
-                     return "Stop", normalized_text, frame  # topic stop GUI words
+                    return "Stop", normalized_text, frame  # topic stop GUI words
 
                 if normalized_text in ["soup", "igvc"]:
                     return "Go", normalized_text, frame

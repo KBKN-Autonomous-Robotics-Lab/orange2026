@@ -39,6 +39,7 @@ setup(
             'whiteline = IGVC2026.whiteline:main',
             'human_detection = IGVC2026.human_detection:main',
             'tire_display = IGVC2026.tire_display:main',
+            'stop_sign_detection = IGVC2026.stop_sign_detection:main',
         ],
     },
 )
