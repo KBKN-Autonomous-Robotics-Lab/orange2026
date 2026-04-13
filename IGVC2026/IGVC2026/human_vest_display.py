@@ -31,8 +31,8 @@ class HumanDisplay(Node):
         self.image_publish = self.create_publisher(CompressedImage, 'camera/image/compressed', qos)
         
 
-        #self.cap = cv2.VideoCapture('/dev/camera', cv2.CAP_V4L2)
-        self.cap = cv2.VideoCapture('/dev/sensors/camera', cv2.CAP_V4L2)
+        self.cap = cv2.VideoCapture('/dev/camera', cv2.CAP_V4L2)
+        #self.cap = cv2.VideoCapture('/dev/sensors/camera', cv2.CAP_V4L2)
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -70,13 +70,23 @@ class HumanDisplay(Node):
                 if cls_id == 0 and conf >= 0.5 and (w > 50 and h > 200): # width , height -> pixel
                     cropped_img = result.orig_img[y1:y2, x1:x2]
                     h_cropped, w_cropped = cropped_img.shape[:2]
-                    y_start = h_cropped // 6
-                    y_end = int(h_cropped - (h_cropped / 3.6))
+                    y_start = h_cropped // 7
+                    y_end = int(h_cropped - (h_cropped / 1.8))
                     trimmed_img = cropped_img[y_start:y_end, :]
 
                     top = y1 + y_start
                     bottom = y1 + y_end
+                    label = f"human vest"
                     cv2.rectangle(frame, (x1, top), (x2, bottom), (0,255,0),2)
+                    cv2.putText(
+                        frame,
+                        label,
+                        (x1,y1-10),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        1.0,
+                        (0,255,0),
+                        2
+                    )
 
         
         """
