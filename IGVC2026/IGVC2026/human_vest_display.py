@@ -164,7 +164,7 @@ class HumanDisplay(Node):
             """
         end_time = time.time()
         elapsed = (end_time - start_time)*1000
-        print(f"Inference +  drawing time: {elapsed:.2f} ms")
+        self.get_logger().info(f"Inference +  drawing time: {elapsed:.2f} ms")
 
         cv2.imshow("camera", frame)
         cv2.waitKey(1)
