@@ -16,6 +16,8 @@ import tkinter as tk
 from threading import Thread
 from cv_bridge import CvBridge
 from collections import deque
+import time
+
 
 class HumanDisplay(Node):
     def __init__(self):
@@ -54,6 +56,8 @@ class HumanDisplay(Node):
             return
 
         # human detection and vest display
+        start_time = time.time()
+
     
         results = self.model(frame, verbose=False)
         
@@ -158,7 +162,9 @@ class HumanDisplay(Node):
                                 cv2.rectangle(frame, (global_x1, global_y1), (global_x2, global_y2), (0,255,0),2)
 
             """
-        
+        end_time = time.time()
+        elapsed = (end_time - start_time)*1000
+        print(f"Inference +  drawing time: {elapsed:.2f} ms")
 
         cv2.imshow("camera", frame)
         cv2.waitKey(1)
