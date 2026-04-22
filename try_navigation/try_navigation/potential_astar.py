@@ -138,7 +138,7 @@ class PotentialAStar(Node):
         self.obs_flag = 0   # 0: バレルなし, 1: バレルあり
         
         #DRIVE MODEF
-        self.functions_test = 0 #autonav:1 selfdrive:0
+        self.functions_test = 1 #autonav:1 selfdrive:0
         
         #obs info for SELF DRIVE
         self.tire_info        = 0
@@ -152,12 +152,12 @@ class PotentialAStar(Node):
             #   0       1     2        3         4         5           6
             #tire pothole human stopsign whiteline solidline  dashedline
             [   0,      0,    0,       1,        1,        0,          0], # waypoint  0 front stop
-            [   0,      0,    0,       1,        0,        1,          0], # waypoint  1 front r lane
+            [   0,      0,    0,       1,        1,        1,          0], # waypoint  1 front r lane
             [   0,      0,    0,       0,        1,        0,          1], # waypoint  2 curve
             [   0,      0,    0,       0,        1,        0,          1], # waypoint  3 front barrel
-            [   0,      0,    0,       0,        0,        1,          0], # waypoint  4 next barrel :lanechange
+            [   0,      0,    0,       0,        1,        1,          0], # waypoint  4 next barrel :lanechange
             [   0,      0,    0,       0,        1,        1,          0], # waypoint  5 front barrel
-            [   0,      0,    0,       0,        0,        1,          0], # waypoint  6 next barrel :lanechange
+            [   0,      0,    0,       0,        1,        1,          0], # waypoint  6 next barrel :lanechange
             [   0,      0,    0,       2,        1,        0,          1], # waypoint  7 front stop
             [   0,      0,    0,       2,        0,        1,          0], # waypoint  8 intersection
             [   0,      0,    0,       0,        0,        0,          0], # waypoint  9 front stop
