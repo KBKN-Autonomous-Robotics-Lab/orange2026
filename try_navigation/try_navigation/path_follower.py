@@ -375,7 +375,7 @@ class PathFollower(Node):
         
         
         ################# IGVC SelfDrive Full #20250601# #################
-        if self.sd_full_flag == 1:
+        if self.sd_full_flag == 0:
             
             ################# IGVC SelfDrive full sign stop #20250601# ################
             ###### stop1 #######
