@@ -54,6 +54,8 @@ class PathFollower(Node):
         self.stop_sub = self.create_subscription(String, '/stop_sign_status', self.stop_sign_callback, 10)
         self.human_sub = self.create_subscription(String, '/human_status', self.human_callback, 10)
         self.waypoint_number_subscription = self.create_subscription(Int32,'/waypoint_number', self.get_waypoint_number, qos_profile_sub)
+        self.stop_sign_sub = self.create_subscription(String, '/stop_sign_flag', self.stop_sign_flag_callback, 10)
+        self.stop_line_sub = self.create_subscription(sensor_msgs.PointCloud2, 'white_line_solid', self.stop_line_pcd, 10)
         self.subscription  # 警告を回避するために設置されているだけです。削除しても挙動はかわりません。
         
         # タイマーを0.05秒（50ミリ秒）ごとに呼び出す
@@ -62,6 +64,24 @@ class PathFollower(Node):
         
         # Publisherを作成
         self.cmd_vel_publisher = self.create_publisher(geometry_msgs.Twist, 'cmd_vel', qos_profile) #set publish pcd topic name
+        
+        # LiDAR human detection area (m) SD V.1~3 variable
+        self.human_x_min = 1.5
+        self.human_x_max = 2.0
+        self.human_y_min = -1.0
+        self.human_y_max = 1.0
+        
+        # LiDAR stop detection area (m) SD Ⅲ.1~3 variable
+        self.stop_line_x_min = 0.1
+        self.stop_line_x_max = 0.45
+        self.stop_line_y_min = -0.2
+        self.stop_line_y_max = 0.2
+
+        # first status init
+        self.whiteline_detection_done = None
+        self.stop_line_flag = 0
+        self.stop_sign_flag = 0
+        
         
         #パラメータ init
         self.path_plan = np.array([[0],[0],[0]])
@@ -147,17 +167,18 @@ class PathFollower(Node):
         self.human_obs_flag = 0
         
         
+        
         ################# IGVC SelfDrive Quolification line stop test #20250530# #################
         self.sd_quolification_line_stop = 0 #root flag
         #self.sd_c_obs_stop_dist = 0.305*3 + 0.0254*2 + 0.4 + 0.37# 3feat + 2inch +top +delay
-        self.sd_c_obs_stop_dist = 0.305*2 + 0.0254*2 + 0.4 + 0.37# 2feat + 2inch +top +delay
-        self.sd_c_obs_slow_dist = self.sd_c_obs_stop_dist + 1 #slow before 1m
+        self.sd_c_obs_stop_dist = 0.305*2 + 0.0254*2 + 0.4 + 0.37# 2feat + 2inch +top +delay 停止距離
+        self.sd_c_obs_slow_dist = self.sd_c_obs_stop_dist + 1 #slow before 1m 
         ##########################################################################################   
         
         ################# IGVC SelfDrive III.1 function test #20250531# #################
         self.sd_line_stop_set = 0 #root flag
         self.time_restart = 0
-        self.time_restart_count = 50 #n/Hz = s
+        self.time_restart_count = 50 #n/Hz = s 5秒待機
         self.stop_flag_first_check = 0
         self.sd_line_stop_set_flag = 0
         #################################################################################
@@ -187,7 +208,8 @@ class PathFollower(Node):
         self.previous_status = None    
         self.human_status = None    
         ##################################################################
-    
+
+    # human stop SD function test V.1~3
     def listener_callback(self, goal_handle):
         a = goal_handle.request.a
         b = goal_handle.request.b
@@ -208,40 +230,30 @@ class PathFollower(Node):
             goal_handle.succeed()
 
             return result
-
-        elif a == 2:
-            self.get_logger().info("Stop sign mode start")
-            #self.stop_flag = goal_handle.request.a
-            # stop sign goal は常に処理
-            # ここで白線認識し、停止信号を出す予定。
-            detected = self.detect_white_line()
-            if detected:
-                self.get_logger().info("white line detected")
-                result.sum = 999
-
-            else:
-                self.get_logger().info("white line not detected")
-                
-            #result.sum = 999
-            goal_handle.succeed()
-            return result
-
+        
         else:
-            self.get_logger().info("Human or Tire goal received")
+            self.get_logger().info("Nothing detect")
             #self.stop_flag = goal_handle.request.a
             result.sum = a + b
             goal_handle.succeed()
 
         return result
 
-        # -------------------------
-        # その他の goal
-        # -------------------------
-    
+    """
     # action test (tuika)
     def detect_white_line(self):
         self.get_logger().info("Dummy white line detection running")
         return False
+    """
+
+    # stopsign topic (tanaka tuika)
+    # subscribe stop_sign_status
+    def stop_sign_flag_callback(self, msg):
+        if msg.data == "Detected":
+            self.stop_sign_flag = 1
+
+
+
 
 
 
@@ -478,14 +490,15 @@ class PathFollower(Node):
         
         
         ################# IGVC SelfDrive Full #20250601# #################
-        if self.sd_full_flag == 1:
+        if self.sd_full_flag == 1: # init内で定義されている。
             
             ################# IGVC SelfDrive full sign stop #20250601# ################
             ###### stop1 #######
-            if self.sd_full_sign_stop == 1: #flow 1-1
-                if self.waypoint_number == 6:
-                    self.time_restart = 1
+            if self.sd_full_sign_stop == 1: #flow 1-1, init内で定義されている。
+                if self.waypoint_number == 6: # waypoint6に来たら
+                    self.time_restart = 1 # タイマー開始
                     self.sd_full_sign_stop = 2
+                    
             if self.sd_full_sign_stop == 2: #flow 1-2
                 #if self.previous_status == "Stop":
                 #    self.time_restart = 0
@@ -493,12 +506,15 @@ class PathFollower(Node):
                 #    self.stop_flag_first_check = 0
                 if self.stop_flag == 0:
                     self.stop_flag_first_check = 1
+                    
                 if self.time_restart == 1 and self.stop_flag == 1:
                     if self.stop_flag_first_check == 1:
                         self.time_restart_count -= 1
+                        
                     if self.time_restart_count < 0:
                         self.time_restart = 0
-                        self.stop_flag = 0
+                        self.stop_flag = 0 # 一定時間とまってから再スタート
+                        
                 if self.waypoint_number == 9: # fail safe
                     self.time_restart = 0
                     self.stop_flag_first_check = 0
@@ -531,7 +547,8 @@ class PathFollower(Node):
             ###########################################################################
 
             ################# IGVC SelfDrive full human stop #20250601# ###############
-            if self.sd_full_human_stop == 1:
+            # topic通信でStopまたはGoを送っていないため、現段階では以下は動かない。
+            if self.sd_full_human_stop == 1: # init内で定義されている。
                 if self.waypoint_number == 9:
                     self.sd_quolification_line_stop = 1
                     self.sd_human_stop = 1
@@ -588,6 +605,35 @@ class PathFollower(Node):
                     self.stop_flag = 0
         
         #################################################################################
+
+
+        # SD function test III.1~3 stopsign and whiteline (Tanaka tuika)
+        if self.stop_sign_flag == 1:
+            self.get_logger().info("Stop sign mode start")
+            self.get_logger().info("Detecting white Line")
+            if self.stop_line_flag == 1:
+                self.get_logger().info("Stop")
+                # ここで白線認識し、停止信号を出す予定。
+                self.stop_flag = 1
+                self.stop_flag_first_check = 1
+                if self.time_restart == 1 and self.stop_flag == 1:
+                    if self.stop_flag_first_check == 1:
+                        self.time_restart_count -= 1
+                    if self.time_restart_count < 0:
+                        self.time_restart = 0
+                        self.whiteline_detection_done = True
+
+            else:
+                self.get_logger().info("white line not detected")
+
+        if self.whiteline_detection_done:
+            self.get_logger().info("Go!")
+            self.stop_flag = 0
+            self.stop_sign_flag = 0
+            self.stop_line_flag = 0
+            self.whiteline_detection_done = False
+
+        
         
         
         #elif abs(target_theta)  > 90:
@@ -742,11 +788,34 @@ class PathFollower(Node):
             self.lh_obs = 0
 
         # tsuika(Tanaka)
-        self.human_obs = self.pcd_serch(points, 1.5, 2, -1.0, 1.0)
+        self.human_obs = self.pcd_serch(
+            points,
+            self.human_x_min,
+            self.human_x_max,
+            self.human_y_min,
+            self.human_y_max
+        )
+        
         if np.any(self.human_obs):
             self.human_obs_flag = 1
         else:
             self.human_obs_flag = 0
+
+    # SD function test Ⅲ.1~3 white(stop)line detection          
+    def stop_line_pcd(self, msg):
+        points = self.pointcloud2_to_array(msg)
+        self.line_obs = self.pcd_serch(
+            points,
+            self.stop_line_x_min,
+            self.stop_line_x_max,
+            self.stop_line_y_min,
+            self.stop_line_y_max
+        )
+        
+        if np.any(self.line_obs):
+            self.stop_line_flag = 1
+        else:
+            self.stop_line_flag = 0
 
 
 
@@ -807,3 +876,4 @@ def main(args=None):
 if __name__ == '__main__':
     # 関数`main`を実行する。
     main()
+
