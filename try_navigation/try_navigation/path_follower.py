@@ -192,7 +192,7 @@ class PathFollower(Node):
         #################################################################################
         
         ################# IGVC SelfDrive Full #20250601# #################
-        self.sd_full_flag = 1 #root flag
+        self.sd_full_flag = 0 #root flag
         self.waypoint_number = 0
         self.sd_full_human_stop = 1  #sub flag
         if self.sd_full_human_stop == 1:
