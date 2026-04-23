@@ -60,7 +60,7 @@ class ReflectionIntensityMap(Node):
         # Subscriptionを作成。CustomMsg型,'/livox/lidar'という名前のtopicをsubscribe。
         self.subscription = self.create_subscription(sensor_msgs.PointCloud2, '/pcd_segment_ground', self.reflect_map, qos_profile)
         self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom', self.get_odom, qos_profile_sub)
-        self.subscription = self.create_subscription(nav_msgs.Odometry,'odom/wheel_imu', self.get_ekf_odom, qos_profile_sub)
+        self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_ekf_odom, qos_profile_sub)
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom_fast', self.get_odom, qos_profile_sub)
         self.subscription  # 警告を回避するために設置されているだけです。削除しても挙動はかわりません。
         self.timer = self.create_timer(0.1, self.timer_callback)
@@ -135,8 +135,8 @@ class ReflectionIntensityMap(Node):
         self.map_place_x = -0 #auto nav -0 self drive  range 12  x 0
         self.map_place_y = 14.1 # autona14 self drive   range 12 y 24.1
 
-        self.intensity_threshold = 50.0  #反射強度閾値
-        self.dbscan_eps = 0.30
+        self.intensity_threshold = 35.0  #反射強度閾値
+        self.dbscan_eps = 0.20
         self.dbscan_min_samples = 6
         self.cluster_size_threshold = 10
 
@@ -389,7 +389,7 @@ class ReflectionIntensityMap(Node):
                 if cluster_size > 180 and (spread_x > 0.5 or spread_y > 0.5):
                     self.get_logger().info(f"solid cluster {label}: {cluster_size} points")
                     solid_clusters.append(cluster)
-                elif cluster_size > 40:
+                elif cluster_size > 30:
                     self.get_logger().info(f"dashed cluster {label}: {cluster_size} points")
                     dashed_clusters.append(cluster)
 

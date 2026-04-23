@@ -117,9 +117,6 @@ class PotentialAStar(Node):
         self.waypoint_number = 0
         self.pothole_number = 0 #functions test
         self.white_number = 0 # front stop:1 lanechange:0 Q1:0 
-        self.right_number = 0 # front stop:0 lanechange:1 Q1:0
-        self.left_number = 0 # front stop:None lanechange:1 Q1:0
-        self.dot_number = 0 # front stop:0 lanechange:0 Q1:0
         
         #map_obs
         self.map_obs_points = np.array([[],[],[]])
