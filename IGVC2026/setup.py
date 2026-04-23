@@ -42,6 +42,7 @@ setup(
             'stop_sign_detection = IGVC2026.stop_sign_detection:main',
             'pothole_display = IGVC2026.pothole_display:main',
             'line_display = IGVC2026.line_display:main',
+            'mannequin_detection = IGVC2026.mannequin_detection:main',
         ],
     },
 )

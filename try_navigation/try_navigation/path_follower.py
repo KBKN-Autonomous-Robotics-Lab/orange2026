@@ -55,6 +55,7 @@ class PathFollower(Node):
         self.human_sub = self.create_subscription(String, '/human_status', self.human_callback, 10)
         self.waypoint_number_subscription = self.create_subscription(Int32,'/waypoint_number', self.get_waypoint_number, qos_profile_sub)
         self.stop_sign_sub = self.create_subscription(String, '/stop_sign_flag', self.stop_sign_flag_callback, 10)
+        self.mannequin_sub = self.create_subscription(String, '/mannequin_flag', self.mannequin_flag_callback, 10)
         self.stop_line_sub = self.create_subscription(sensor_msgs.PointCloud2, 'white_line_solid', self.stop_line_pcd, 10)
         self.subscription  # 警告を回避するために設置されているだけです。削除しても挙動はかわりません。
         
@@ -65,11 +66,23 @@ class PathFollower(Node):
         # Publisherを作成
         self.cmd_vel_publisher = self.create_publisher(geometry_msgs.Twist, 'cmd_vel', qos_profile) #set publish pcd topic name
         
+        # ============== SD function test V.1~2 human stop ==============
+        # set up V.1~2 flag (1:use, 0:not use)
+        self.sd_fn_5 = 0
         # LiDAR human detection area (m) SD V.1~3 variable
         self.human_x_min = 1.5
         self.human_x_max = 2.0
-        self.human_y_min = -1.0
-        self.human_y_max = 1.0
+        self.human_y_min = -0.25
+        self.human_y_max = 0.25
+
+        # first status init
+        self.mannequin_detection_done = None
+        self.mannequin_flag = 0
+        # ===============================================================
+        
+        # ============== SD function test Ⅲ.1~3 stopsign and stopline stop ==============
+        # set up Ⅲ.1~3 flag (1:use, 0:not use)
+        self.sd_fn_3 = 1 
         
         # LiDAR stop detection area (m) SD Ⅲ.1~3 variable
         self.stop_line_x_min = 0.1
@@ -81,7 +94,7 @@ class PathFollower(Node):
         self.whiteline_detection_done = None
         self.stop_line_flag = 0
         self.stop_sign_flag = 0
-        
+        # ================================================================================
         
         #パラメータ init
         self.path_plan = np.array([[0],[0],[0]])
@@ -251,6 +264,11 @@ class PathFollower(Node):
     def stop_sign_flag_callback(self, msg):
         if msg.data == "Detected":
             self.stop_sign_flag = 1
+
+    # mannequin topic 
+    def mannequin_flag_callback(self, msg):
+        if msg.data == "Stop":
+            self.mannequin_flag = 1
 
 
 
@@ -607,31 +625,56 @@ class PathFollower(Node):
         #################################################################################
 
 
-        # SD function test III.1~3 stopsign and whiteline (Tanaka tuika)
-        if self.stop_sign_flag == 1:
-            self.get_logger().info("Stop sign mode start")
-            self.get_logger().info("Detecting white Line")
-            if self.stop_line_flag == 1:
-                self.get_logger().info("Stop")
-                # ここで白線認識し、停止信号を出す予定。
-                self.stop_flag = 1
-                self.stop_flag_first_check = 1
-                if self.time_restart == 1 and self.stop_flag == 1:
-                    if self.stop_flag_first_check == 1:
-                        self.time_restart_count -= 1
-                    if self.time_restart_count < 0:
-                        self.time_restart = 0
-                        self.whiteline_detection_done = True
+        # SD function test III.1~3 stopsign and stopline stop (Tanaka tuika)
+        if self.sd_fn_3 == 1:
+            if self.stop_sign_flag == 1:
+                self.get_logger().info("Stop sign mode start")
+                self.get_logger().info("Detecting white Line")
+                if self.stop_line_flag == 1:
+                    self.get_logger().info("Stop")
+                    # ここで白線認識し、停止信号を出す予定。
+                    self.stop_flag = 1
+                    self.stop_flag_first_check = 1
+                    if self.time_restart == 1 and self.stop_flag == 1:
+                        if self.stop_flag_first_check == 1:
+                            self.time_restart_count -= 1
+                        if self.time_restart_count < 0:
+                            self.time_restart = 0
+                            self.whiteline_detection_done = True
 
-            else:
-                self.get_logger().info("white line not detected")
 
-        if self.whiteline_detection_done:
-            self.get_logger().info("Go!")
-            self.stop_flag = 0
-            self.stop_sign_flag = 0
-            self.stop_line_flag = 0
-            self.whiteline_detection_done = False
+            if self.whiteline_detection_done:
+                self.get_logger().info("Go!")
+                self.stop_flag = 0
+                self.stop_sign_flag = 0
+                self.stop_line_flag = 0
+                self.whiteline_detection_done = False
+
+        # SD function test V.1~2 human stop
+        if self.sd_fn_5 == 1:
+            if self.mannequin_flag == 1:
+                self.get_logger().info("camera detect mannequin")
+                if self.human_obs_flag == 1:
+                    self.get_logger().info("Lidar detect mannequin")
+                    self.stop_flag = 1
+                    self.stop_flag_first_check = 1
+                    if self.time_restart == 1 and self.stop_flag == 1:
+                        if self.stop_flag_first_check == 1:
+                            self.time_restart_count -= 1
+                        if self.time_restart_count < 0:
+                            self.time_restart = 0
+                            self.mannequin_detection_done = True
+            
+            if self.mannequin_detection_done:
+                self.get_logger().info("Go!")
+                self.stop_flag = 0
+                self.mannequin_flag = 0
+                self.human_obs_flag = 0
+                self.mannequin_detection_done = False
+
+
+
+        
 
         
         
