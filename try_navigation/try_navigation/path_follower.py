@@ -56,7 +56,8 @@ class PathFollower(Node):
         self.waypoint_number_subscription = self.create_subscription(Int32,'/waypoint_number', self.get_waypoint_number, qos_profile_sub)
         self.stop_sign_sub = self.create_subscription(String, '/stop_sign_flag', self.stop_sign_flag_callback, 10)
         self.mannequin_sub = self.create_subscription(String, '/mannequin_flag', self.mannequin_flag_callback, 10)
-        self.stop_line_sub = self.create_subscription(sensor_msgs.PointCloud2, 'white_line_solid', self.stop_line_pcd, 10)
+        #self.stop_line_sub = self.create_subscription(sensor_msgs.PointCloud2, 'white_line_solid', self.stop_line_pcd, 10)
+        self.stop_line_sub = self.create_subscription(sensor_msgs.PointCloud2, 'white_lines', self.stop_line_pcd, 10)
         self.subscription  # 警告を回避するために設置されているだけです。削除しても挙動はかわりません。
         
         # タイマーを0.05秒（50ミリ秒）ごとに呼び出す
@@ -68,10 +69,10 @@ class PathFollower(Node):
         
         # ============== SD function test V.1~2 human stop ==============
         # set up V.1~2 flag (1:use, 0:not use)
-        self.sd_fn_5 = 0
+        self.sd_fn_5 = 1
         # LiDAR human detection area (m) SD V.1~3 variable
-        self.human_x_min = 1.5
-        self.human_x_max = 2.0
+        self.human_x_min = 1.0
+        self.human_x_max = 1.8
         self.human_y_min = -0.25
         self.human_y_max = 0.25
 
@@ -82,11 +83,11 @@ class PathFollower(Node):
         
         # ============== SD function test Ⅲ.1~3 stopsign and stopline stop ==============
         # set up Ⅲ.1~3 flag (1:use, 0:not use)
-        self.sd_fn_3 = 1 
+        self.sd_fn_3 = 0
         
         # LiDAR stop detection area (m) SD Ⅲ.1~3 variable
         self.stop_line_x_min = 0.1
-        self.stop_line_x_max = 0.45
+        self.stop_line_x_max = 1
         self.stop_line_y_min = -0.2
         self.stop_line_y_max = 0.2
 

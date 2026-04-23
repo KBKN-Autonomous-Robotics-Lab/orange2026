@@ -82,7 +82,7 @@ class ReflectionIntensityMap(Node):
         
         #self.white_buff = np.array([[],[],[],[]]);
         self.white_buff = np.array([[],[],[],[],[]]);
-        self.duration = 3.0  # time for buff white_buff
+        self.duration = 5.0  # time for buff white_buff
 
         #パラメータ
         #odom positon init
@@ -135,7 +135,7 @@ class ReflectionIntensityMap(Node):
         self.map_place_x = -0 #auto nav -0 self drive  range 12  x 0
         self.map_place_y = 14.1 # autona14 self drive   range 12 y 24.1
 
-        self.intensity_threshold = 30.0  #反射強度閾値
+        self.intensity_threshold = 20.0  #反射強度閾値
         self.dbscan_eps = 0.30
         self.dbscan_min_samples = 6
         self.cluster_size_threshold = 10
@@ -389,7 +389,7 @@ class ReflectionIntensityMap(Node):
                 if cluster_size > 180 and (spread_x > 0.5 or spread_y > 0.5):
                     self.get_logger().info(f"solid cluster {label}: {cluster_size} points")
                     solid_clusters.append(cluster)
-                elif cluster_size > 40:
+                elif cluster_size > 25:
                     self.get_logger().info(f"dashed cluster {label}: {cluster_size} points")
                     dashed_clusters.append(cluster)
 
