@@ -93,8 +93,9 @@ class PathFollower(Node):
         self.target_rad_buff = 0.0
         
         #speed init
+        self.linear_x = 0.0 
         self.prev_error = 0.0  # 前回の偏差を保存する変数
-        self.k_p_s = 0.6
+        self.k_p_s = 0.02
         self.k_d_s = 0.3
 
         self.stop_xy_test = [8, 10, -10, 10]
@@ -148,7 +149,7 @@ class PathFollower(Node):
         
         
         ################# IGVC SelfDrive Quolification line stop test #20250530# #################
-        self.sd_quolification_line_stop = 1 #root flag
+        self.sd_quolification_line_stop = 0 #root flag
         #self.sd_c_obs_stop_dist = 0.305*3 + 0.0254*2 + 0.4 + 0.37# 3feat + 2inch +top +delay
         self.sd_c_obs_stop_dist = 0.305*3 + 0.0254*0 + 0.3 + 0.0# 2feat + 2inch +top +delay
         self.sd_c_obs_slow_dist = self.sd_c_obs_stop_dist + 1 #slow before 1m
@@ -287,7 +288,7 @@ class PathFollower(Node):
         
         #set speed
         
-        speed_set = 0.5#55 AutoNav 1.10
+        speed_set = 1.1#55 AutoNav 1.10
         speed = speed_set
         
         ################# IGVC SelfDrive Full #20250601# #################
@@ -493,7 +494,7 @@ class PathFollower(Node):
         
         #speedPD
         target_speed = speed  # 目標速度
-        now_speed = linear_x  # 現在の速度（センサー値など）
+        now_speed = self.linear_x  # 現在の速度（センサー値など）
         # 1. 偏差（Error）を計算する
         error = target_speed - now_speed
         # 2. PD制御関数を呼び出し、制御量（操作量）を受け取る
