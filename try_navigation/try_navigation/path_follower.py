@@ -858,8 +858,10 @@ class PathFollower(Node):
         
         if np.any(self.line_obs):
             self.stop_line_flag = 1
+            print("!!detect pointcloud!!")
         else:
             self.stop_line_flag = 0
+            print("!!None!!")
 
 
 
