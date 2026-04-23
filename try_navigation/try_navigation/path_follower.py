@@ -92,6 +92,11 @@ class PathFollower(Node):
         
         self.target_rad_buff = 0.0
         
+        #speed init
+        self.prev_error = 0.0  # 前回の偏差を保存する変数
+        self.k_p_s = 0.6
+        self.k_d_s = 0.3
+
         self.stop_xy_test = [8, 10, -10, 10]
         self.stop_xy_test_flag = 1
         
@@ -486,8 +491,21 @@ class PathFollower(Node):
         target_rad_pd = self.sensim0(target_rad, self.target_rad_buff)
         self.target_rad_buff = target_rad_pd
         
-        #target_rad_pd = target_rad
-        
+        #speedPD
+        target_speed = speed  # 目標速度
+        now_speed = linear_x  # 現在の速度（センサー値など）
+        # 1. 偏差（Error）を計算する
+        error = target_speed - now_speed
+        # 2. PD制御関数を呼び出し、制御量（操作量）を受け取る
+        # 前回の偏差（self.prev_error）を第2引数に渡す
+        control_output = self.sensim0_speed(error, self.prev_error)
+        # 3. 今回の偏差を次回の計算のために保存する
+        self.prev_error = error
+        # 4. 現在の速度に制御量を足して、次の速度指令（now_speed）を決定する
+        now_speed = now_speed + control_output
+
+
+
         #make msg
         twist_msg = geometry_msgs.Twist()
         #check stop flag
@@ -539,6 +557,12 @@ class PathFollower(Node):
     def sensim0(self, e_n, e_n1):
         e_n = (self.k_p * e_n + self.k_d*(e_n - e_n1))
         return e_n
+    #speed PD
+    def sensim0_speed(self, E_n, E_n1):
+        # E_n: 今回の偏差, E_n1: 前回の偏差
+        # PD制御の公式に基づいた計算
+        output = (self.k_p_s * E_n) + (self.k_d_s * (E_n - E_n1))
+        return output
     
     def get_odom_ref(self, msg):
         self.ref_position_x = msg.pose.pose.position.x
@@ -660,3 +684,4 @@ def main(args=None):
 if __name__ == '__main__':
     # 関数`main`を実行する。
     main()
+
