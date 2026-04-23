@@ -133,6 +133,8 @@
   <!-- F9P GPS odom publisher -->
   <node pkg="orange_gnss" exec="lonlat_to_odom" output="screen">
     <param name="heading" value="0.0"/>
+    <param name="start_lat" value="$(var start_lat)"/>
+    <param name="start_lon" value="$(var start_lon)"/>
   </node>
   <node pkg="orange_gnss" exec="combination" output="screen">
   </node>
