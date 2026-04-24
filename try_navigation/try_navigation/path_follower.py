@@ -532,11 +532,16 @@ class PathFollower(Node):
         self.theta_y = 0 #pitch /math.pi*180
         self.theta_z = yaw /math.pi*180
         
-    def sensim0(self, steering):
-        self.e_n = steering
-        steering = (self.k_p * self.e_n + self.k_d*(self.e_n - self.e_n1))
-        self.e_n1 = self.e_n
-        return steering
+    #def sensim0(self, steering):
+        #self.e_n = steering
+        #steering = (self.k_p * self.e_n + self.k_d*(self.e_n - self.e_n1))
+        #self.e_n1 = self.e_n
+        #return steering
+        
+    def sensim0(self, error):
+        output = (self.k_p * error) + (self.k_d * (error - self.e_n1))
+        self.e_n1 = error
+        return output
     
     def get_odom_ref(self, msg):
         self.ref_position_x = msg.pose.pose.position.x
