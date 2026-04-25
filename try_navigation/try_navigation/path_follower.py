@@ -141,7 +141,7 @@ class PathFollower(Node):
         
         
         ################# IGVC SelfDrive Quolification line stop test #20250530# #################
-        self.sd_quolification_line_stop = 1 #root flag
+        self.sd_quolification_line_stop = 0 #root flag
         #self.sd_c_obs_stop_dist = 0.305*3 + 0.0254*2 + 0.4 + 0.37# 3feat + 2inch +top +delay
         self.sd_c_obs_stop_dist = 0.305*3 + 0.0254*0 + 0.3 + 0.0# 2feat + 2inch +top +delay
         self.sd_c_obs_slow_dist = self.sd_c_obs_stop_dist + 1 #slow before 1m
@@ -280,7 +280,7 @@ class PathFollower(Node):
         
         #set speed
         
-        speed_set = 0.5#55 AutoNav 1.10
+        speed_set = 0.55#55 AutoNav 1.10
         speed = speed_set
         
         ################# IGVC SelfDrive Full #20250601# #################
