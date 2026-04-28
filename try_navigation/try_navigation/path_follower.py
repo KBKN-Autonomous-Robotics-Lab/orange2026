@@ -69,7 +69,7 @@ class PathFollower(Node):
         
         # ============== SD function test V.1~2 human stop ==============
         # set up V.1~2 flag (1:use, 0:not use)
-        self.sd_fn_5 = 1
+        self.sd_fn_5 = 0
         # LiDAR human detection area (m) SD V.1~3 variable
         self.human_x_min = 1.0
         self.human_x_max = 1.8
@@ -83,13 +83,13 @@ class PathFollower(Node):
         
         # ============== SD function test Ⅲ.1~3 stopsign and stopline stop ==============
         # set up Ⅲ.1~3 flag (1:use, 0:not use)
-        self.sd_fn_3 = 0
+        self.sd_fn_3 = 1
         
         # LiDAR stop detection area (m) SD Ⅲ.1~3 variable
         self.stop_line_x_min = 0.1
-        self.stop_line_x_max = 1
-        self.stop_line_y_min = -0.2
-        self.stop_line_y_max = 0.2
+        self.stop_line_x_max = 0.7
+        self.stop_line_y_min = -0.1
+        self.stop_line_y_max = 0.1
 
         # first status init
         self.whiteline_detection_done = None
@@ -848,8 +848,19 @@ class PathFollower(Node):
     # SD function test Ⅲ.1~3 white(stop)line detection          
     def stop_line_pcd(self, msg):
         points = self.pointcloud2_to_array(msg)
+        #position set
+        position_x=self.position_x; position_y=self.position_y; position_z=self.position_z;
+        position = np.array([position_x, position_y, position_z])
+        theta_x=self.theta_x; theta_y=self.theta_y; theta_z=self.theta_z;
+        
+        
+        #ground global
+        ground_rot, ground_rot_matrix = rotation_xyz(points[[0,1,2],:], theta_x, theta_y, theta_z)
+        ground_x_local = ground_rot[0,:] - position_x
+        ground_y_local = ground_rot[1,:] - position_y
+        ground_local = np.vstack((ground_x_local, ground_y_local, ground_rot[2,:], points[3,:]) , dtype=np.float32)
         self.line_obs = self.pcd_serch(
-            points,
+            ground_local,
             self.stop_line_x_min,
             self.stop_line_x_max,
             self.stop_line_y_min,
@@ -861,7 +872,7 @@ class PathFollower(Node):
             print("!!detect pointcloud!!")
         else:
             self.stop_line_flag = 0
-            print("!!None!!")
+            #print("!!None!!")
 
 
 
