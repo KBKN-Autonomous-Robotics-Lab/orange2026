@@ -636,6 +636,7 @@ class PathFollower(Node):
                     # ここで白線認識し、停止信号を出す予定。
                     self.stop_flag = 1
                     self.stop_flag_first_check = 1
+                    self.time_restart = 1
                     if self.time_restart == 1 and self.stop_flag == 1:
                         if self.stop_flag_first_check == 1:
                             self.time_restart_count -= 1
@@ -659,6 +660,7 @@ class PathFollower(Node):
                     self.get_logger().info("Lidar detect mannequin")
                     self.stop_flag = 1
                     self.stop_flag_first_check = 1
+                    self.time_restart = 1
                     if self.time_restart == 1 and self.stop_flag == 1:
                         if self.stop_flag_first_check == 1:
                             self.time_restart_count -= 1
