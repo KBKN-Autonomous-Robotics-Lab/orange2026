@@ -82,7 +82,7 @@ class ReflectionIntensityMap(Node):
         
         #self.white_buff = np.array([[],[],[],[]]);
         self.white_buff = np.array([[],[],[],[],[]]);
-        self.duration = 5.0  # time for buff white_buff
+        self.duration = 4.0  # time for buff white_buff
 
         #パラメータ
         #odom positon init
@@ -412,7 +412,7 @@ class ReflectionIntensityMap(Node):
                 self.get_logger().info("dashed clusters: 0")
 
             # ===== 全白線 publish =====
-            all_clusters = solid_clusters + dashed_clusters
+            all_clusters = solid_clusters # + dashed_clusters
 
             if len(all_clusters) > 0:
                 all_points = np.hstack(all_clusters)

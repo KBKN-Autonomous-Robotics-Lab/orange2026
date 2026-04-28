@@ -83,11 +83,11 @@ class PathFollower(Node):
         
         # ============== SD function test Ⅲ.1~3 stopsign and stopline stop ==============
         # set up Ⅲ.1~3 flag (1:use, 0:not use)
-        self.sd_fn_3 = 1
+        self.sd_fn_3 = 0
         
         # LiDAR stop detection area (m) SD Ⅲ.1~3 variable
         self.stop_line_x_min = 0.1
-        self.stop_line_x_max = 0.7
+        self.stop_line_x_max = 0.3
         self.stop_line_y_min = -0.1
         self.stop_line_y_max = 0.1
 

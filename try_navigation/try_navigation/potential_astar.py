@@ -330,7 +330,7 @@ class PotentialAStar(Node):
 
         if points.shape[1] > 0:
             front_obs = (
-                (points[0, :] > 0.0) & (points[0, :] < 5.0) &
+                (points[0, :] > 0.0) & (points[0, :] < 4.0) &
                 (np.abs(points[1, :]) < 1.5)
             )
 
