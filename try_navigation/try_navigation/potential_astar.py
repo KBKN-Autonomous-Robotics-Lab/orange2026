@@ -61,10 +61,10 @@ class PotentialAStar(Node):
         self.declare_parameter('odom', '/odom/wheel_imu')
         odom_topic = self.get_parameter('odom').get_parameter_value().string_value
         
-        self.declare_parameter('functions_test','0')#autonav:1 selfdrive:0
+        self.declare_parameter('functions_test',0)#autonav:1 selfdrive:0
         self.functions_test = self.get_parameter('functions_test').get_parameter_value().integer_value
         
-        self.declare_parameter('sd_line_stop_test','0')
+        self.declare_parameter('sd_line_stop_test',0)
         self.sd_line_stop_test = self.get_parameter('sd_line_stop_test').get_parameter_value().integer_value
 
         self.odom_sub = self.create_subscription(nav_msgs.Odometry, odom_topic, self.get_odom, qos_profile)

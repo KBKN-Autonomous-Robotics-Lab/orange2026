@@ -44,20 +44,20 @@ class PathFollower(Node):
         self.declare_parameter('odom', '/odom/wheel_imu')
         odom_topic = self.get_parameter('odom').get_parameter_value().string_value
 
-        self.declare_parameter('sd_quolification_line_stop','0')
+        self.declare_parameter('sd_quolification_line_stop',0)
         self.sd_quolification_line_stop = self.get_parameter('sd_quolification_line_stop').get_parameter_value().integer_value
         
-        self.declare_parameter('sd_line_stop_set','0')
+        self.declare_parameter('sd_line_stop_set',0)
         self.sd_line_stop_set = self.get_parameter('sd_line_stop_set').get_parameter_value().integer_value
         
-        self.declare_parameter('sd_human_stop','0')
+        self.declare_parameter('sd_human_stop',0)
         self.sd_human_stop = self.get_parameter('sd_human_stop').get_parameter_value().integer_value
         
-        self.declare_parameter('sd_full_flag','0')
+        self.declare_parameter('sd_full_flag',0)
         self.sd_full_flag = self.get_parameter('sd_full_flag').get_parameter_value().integer_value
         
-        self.declare_parameter('speed_set','0.55')
-        self.speed_set = self.get_parameter('speed_set').get_parameter_value().string_value
+        self.declare_parameter('speed_set',0.55)
+        self.speed_set = self.get_parameter('speed_set').get_parameter_value().double_value
         #########################################################################################################################################################################
         # Subscriptionを作成。
         #########################################################################################################################################################################

@@ -5,6 +5,9 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
     rviz_config_dir = os.path.join(
@@ -57,7 +60,7 @@ def generate_launch_description():
     speed_set = LaunchConfiguration('speed_set')
     speed_set_arg = DeclareLaunchArgument(
         'speed_set',
-        default_value='0.55',
+        default_value='0.2',
         description='speed_set name'
     )
     #DRIVE MODE #autonav:1 selfdrive:0
