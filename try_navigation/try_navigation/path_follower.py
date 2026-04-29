@@ -83,16 +83,16 @@ class PathFollower(Node):
         
         # ============== SD function test Ⅲ.1~3 stopsign and stopline stop ==============
         # set up Ⅲ.1~3 flag (1:use, 0:not use)
-        self.sd_fn_3 = 0
+        self.sd_fn_3 = 1
         
         # LiDAR stop detection area (m) SD Ⅲ.1~3 variable
         self.stop_line_x_min = 0.1
-        self.stop_line_x_max = 0.3
-        self.stop_line_y_min = -0.1
-        self.stop_line_y_max = 0.1
+        self.stop_line_x_max = 1
+        self.stop_line_y_min = -0.2
+        self.stop_line_y_max = 0.2
 
         # first status init
-        self.whiteline_detection_done = None
+        self.whiteline_detection_done = False
         self.stop_line_flag = 0
         self.stop_sign_flag = 0
         # ================================================================================
@@ -208,10 +208,10 @@ class PathFollower(Node):
         ################# IGVC SelfDrive Full #20250601# #################
         self.sd_full_flag = 0 #root flag
         self.waypoint_number = 0
-        self.sd_full_human_stop = 1  #sub flag
+        self.sd_full_human_stop = 0  #sub flag
         if self.sd_full_human_stop == 1:
             self.sd_c_obs_stop_dist = self.sd_human_stop_dist
-        self.sd_full_sign_stop = 1 #sub flag
+        self.sd_full_sign_stop = 0 #sub flag
         if self.sd_full_sign_stop == 1:
             dist = 0.5 + 0.4 + 0.5# eria +top +delay
             sd_full_stop_xy = [-32.37441428909107, -16.465277566213718, 0.0]
@@ -265,6 +265,8 @@ class PathFollower(Node):
     def stop_sign_flag_callback(self, msg):
         if msg.data == "Detected":
             self.stop_sign_flag = 1
+            self.get_logger().info(f"Received stop : {self.stop_sign_flag}")
+
 
     # mannequin topic 
     def mannequin_flag_callback(self, msg):
@@ -629,10 +631,10 @@ class PathFollower(Node):
         # SD function test III.1~3 stopsign and stopline stop (Tanaka tuika)
         if self.sd_fn_3 == 1:
             if self.stop_sign_flag == 1:
-                self.get_logger().info("Stop sign mode start")
-                self.get_logger().info("Detecting white Line")
+                #self.get_logger().info("Stop sign mode start")
+                #self.get_logger().info("Detecting white Line")
                 if self.stop_line_flag == 1:
-                    self.get_logger().info("Stop")
+                    self.get_logger().info("SSSSSSSSSStop!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                     # ここで白線認識し、停止信号を出す予定。
                     self.stop_flag = 1
                     self.stop_flag_first_check = 1
@@ -646,10 +648,11 @@ class PathFollower(Node):
 
 
             if self.whiteline_detection_done:
-                self.get_logger().info("Go!")
+                self.get_logger().info("Go!!!!!!!!!!!!!!!!!!!!!!!!$$$$$$$$$$$$$$$$")
                 self.stop_flag = 0
                 self.stop_sign_flag = 0
                 self.stop_line_flag = 0
+                self.time_restart_count = 50
                 self.whiteline_detection_done = False
 
         # SD function test V.1~2 human stop
@@ -763,6 +766,54 @@ class PathFollower(Node):
         self.theta_x = 0 #roll /math.pi*180
         self.theta_y = 0 #pitch /math.pi*180
         self.theta_z = yaw /math.pi*180
+
+    def transform_to_global(self, points):
+        # yaw（ラジアンに変換）
+        theta = math.radians(self.theta_z)
+
+        cos_t = math.cos(theta)
+        sin_t = math.sin(theta)
+
+        # ローカル座標
+        x = points[0, :]
+        y = points[1, :]
+        z = points[2, :]
+
+        # グローバル変換
+        x_g = self.position_x + x * cos_t - y * sin_t
+        y_g = self.position_y + x * sin_t + y * cos_t
+        z_g = z  # 高さはそのまま（必要なら調整）
+
+        return np.vstack((x_g, y_g, z_g))
+    def local_to_global_box(self, x_min, x_max, y_min, y_max):
+        theta = math.radians(self.theta_z)
+
+        cos_t = math.cos(theta)
+        sin_t = math.sin(theta)
+
+        # 4点作る
+        corners = np.array([
+            [x_min, y_min],
+            [x_min, y_max],
+            [x_max, y_min],
+            [x_max, y_max]
+        ])
+
+        # 回転＋平行移動
+        global_pts = []
+        for x, y in corners:
+            gx = self.position_x + x * cos_t - y * sin_t
+            gy = self.position_y + x * sin_t + y * cos_t
+            global_pts.append([gx, gy])
+
+        global_pts = np.array(global_pts)
+
+        return (
+            np.min(global_pts[:,0]),
+            np.max(global_pts[:,0]),
+            np.min(global_pts[:,1]),
+            np.max(global_pts[:,1])
+        )
         
     def sensim0(self, steering):
         self.e_n = steering
@@ -850,17 +901,40 @@ class PathFollower(Node):
     # SD function test Ⅲ.1~3 white(stop)line detection          
     def stop_line_pcd(self, msg):
         points = self.pointcloud2_to_array(msg)
-        #position set
+        """
         position_x=self.position_x; position_y=self.position_y; position_z=self.position_z;
         position = np.array([position_x, position_y, position_z])
         theta_x=self.theta_x; theta_y=self.theta_y; theta_z=self.theta_z;
-        
         
         #ground global
         ground_rot, ground_rot_matrix = rotation_xyz(points[[0,1,2],:], theta_x, theta_y, theta_z)
         ground_x_local = ground_rot[0,:] - position_x
         ground_y_local = ground_rot[1,:] - position_y
         ground_local = np.vstack((ground_x_local, ground_y_local, ground_rot[2,:], points[3,:]) , dtype=np.float32)
+        """
+        #points = self.pointcloud2_to_array(msg)
+
+        # global座標
+        px = points[0, :]
+        py = points[1, :]
+        pz = points[2, :]
+
+        # 自車位置
+        t = np.array([self.position_x, self.position_y, self.position_z]).reshape(3,1)
+
+        # 回転行列（global方向）
+        _, R = rotation_xyz(np.zeros((3,1)), self.theta_x, self.theta_y, self.theta_z)
+
+        # ① 平行移動を戻す
+        translated = np.vstack((px, py, pz)) - t
+
+        # ② 逆回転（←これが肝）
+        R_inv = R.T
+        local_xyz = R_inv @ translated
+
+        # まとめ
+        ground_local = np.vstack((local_xyz, points[3,:]))
+
         self.line_obs = self.pcd_serch(
             ground_local,
             self.stop_line_x_min,
@@ -873,8 +947,8 @@ class PathFollower(Node):
             self.stop_line_flag = 1
             print("!!detect pointcloud!!")
         else:
-            self.stop_line_flag = 0
-            #print("!!None!!")
+            #self.stop_line_flag = 0
+            print("!!None!!")
 
 
 
