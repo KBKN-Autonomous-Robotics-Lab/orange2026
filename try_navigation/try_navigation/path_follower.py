@@ -86,8 +86,8 @@ class PathFollower(Node):
         self.sd_fn_3 = 1
         
         # LiDAR stop detection area (m) SD Ⅲ.1~3 variable
-        self.stop_line_x_min = 0.1
-        self.stop_line_x_max = 1
+        self.stop_line_x_min = -0.4
+        self.stop_line_x_max = -0.05
         self.stop_line_y_min = -0.2
         self.stop_line_y_max = 0.2
 
@@ -192,7 +192,7 @@ class PathFollower(Node):
         ################# IGVC SelfDrive III.1 function test #20250531# #################
         self.sd_line_stop_set = 0 #root flag
         self.time_restart = 0
-        self.time_restart_count = 50 #n/Hz = s 5秒待機
+        self.time_restart_count = 100 #n/Hz = s 5秒待機
         self.stop_flag_first_check = 0
         self.sd_line_stop_set_flag = 0
         #################################################################################
@@ -631,8 +631,8 @@ class PathFollower(Node):
         # SD function test III.1~3 stopsign and stopline stop (Tanaka tuika)
         if self.sd_fn_3 == 1:
             if self.stop_sign_flag == 1:
-                #self.get_logger().info("Stop sign mode start")
-                #self.get_logger().info("Detecting white Line")
+                self.get_logger().info("Stop sign mode start")
+                self.get_logger().info("Detecting white Line")
                 if self.stop_line_flag == 1:
                     self.get_logger().info("SSSSSSSSSStop!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                     # ここで白線認識し、停止信号を出す予定。
