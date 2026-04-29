@@ -82,7 +82,7 @@ class ReflectionIntensityMap(Node):
         
         #self.white_buff = np.array([[],[],[],[]]);
         self.white_buff = np.array([[],[],[],[],[]]);
-        self.duration = 3.0  # time for buff white_buff
+        self.duration = 4.0  # time for buff white_buff
 
         #パラメータ
         #odom positon init
@@ -135,10 +135,10 @@ class ReflectionIntensityMap(Node):
         self.map_place_x = -0 #auto nav -0 self drive  range 12  x 0
         self.map_place_y = 14.1 # autona14 self drive   range 12 y 24.1
 
-        self.intensity_threshold = 35.0  #反射強度閾値
-        self.dbscan_eps = 0.20
+        self.intensity_threshold = 45.0  #反射強度閾値
+        self.dbscan_eps = 0.15
         self.dbscan_min_samples = 6
-        self.cluster_size_threshold = 10
+        self.cluster_size_threshold = 20
 
         self.get_logger().info("reflection_to_pcd_dbscan started")
         
