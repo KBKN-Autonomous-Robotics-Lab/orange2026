@@ -57,11 +57,22 @@ class PotentialAStar(Node):
             durability=QoSDurabilityPolicy.VOLATILE,
             depth = 1
         )
+        ##########################################################################################################################################
+        self.declare_parameter('odom', '/odom/wheel_imu')
+        odom_topic = self.get_parameter('odom').get_parameter_value().string_value
         
+        self.declare_parameter('functions_test','0')#autonav:1 selfdrive:0
+        self.functions_test = self.get_parameter('functions_test').get_parameter_value().integer_value
+        
+        self.declare_parameter('sd_line_stop_test','0')
+        self.sd_line_stop_test = self.get_parameter('sd_line_stop_test').get_parameter_value().integer_value
+
+        self.odom_sub = self.create_subscription(nav_msgs.Odometry, odom_topic, self.get_odom, qos_profile)
+##########################################################################################################################################        
         # Subscriptionを作成。CustomMsg型,'/livox/lidar'という名前のtopicをsubscribe。
         self.subscription = self.create_subscription(sensor_msgs.PointCloud2, '/pcd_segment_obs', self.potential_astar, qos_profile)
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_odom, qos_profile_sub)
-        self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_odom, qos_profile_sub)
+        #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_odom, qos_profile_sub)
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom_fast', self.get_odom, qos_profile_sub)
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom_ekf_match', self.get_odom, qos_profile_sub)
         self.subscription = self.create_subscription(geometry_msgs.PoseArray,'/current_waypoint', self.get_waypoint, qos_profile_sub)
@@ -138,7 +149,7 @@ class PotentialAStar(Node):
         self.dot_obs_points = np.array([[],[],[]])
         
         #DRIVE MODE
-        self.functions_test = 0 #autonav:1 selfdrive:0
+        #self.functions_test = 0 #autonav:1 selfdrive:0
         
         #obs info for SELF DRIVE
         self.tire_info      = 0
@@ -178,7 +189,7 @@ class PotentialAStar(Node):
         
         
         ################# IGVC SelfDrive Quolification line stop test #20250530# #################
-        self.sd_line_stop_test = 0
+        #self.sd_line_stop_test = 0
         ##########################################################################################
         
     def timer_callback(self):
@@ -431,6 +442,7 @@ class PotentialAStar(Node):
         
         
         ################# IGVC SelfDrive Quolification line stop test #20250530# #################
+        #barell de kaihikoudou toranaiyouni kesu
         if self.sd_line_stop_test == 1:
             obs_points = np.array([[],[],[]])
             #white_line_local =  np.array([[],[],[]])

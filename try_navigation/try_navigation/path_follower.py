@@ -40,13 +40,38 @@ class PathFollower(Node):
         self.server = ActionServer(self,
             StopFlag, "stop_flag", self.listener_callback)
         
+        #########################################################################################################################################################################
+        self.declare_parameter('odom', '/odom/wheel_imu')
+        odom_topic = self.get_parameter('odom').get_parameter_value().string_value
+
+        self.declare_parameter('sd_quolification_line_stop','0')
+        self.sd_quolification_line_stop = self.get_parameter('sd_quolification_line_stop').get_parameter_value().integer_value
+        
+        self.declare_parameter('sd_line_stop_set','0')
+        self.sd_line_stop_set = self.get_parameter('sd_line_stop_set').get_parameter_value().integer_value
+        
+        self.declare_parameter('sd_human_stop','0')
+        self.sd_human_stop = self.get_parameter('sd_human_stop').get_parameter_value().integer_value
+        
+        self.declare_parameter('sd_full_flag','0')
+        self.sd_full_flag = self.get_parameter('sd_full_flag').get_parameter_value().integer_value
+        
+        self.declare_parameter('speed_set','0.55')
+        self.speed_set = self.get_parameter('speed_set').get_parameter_value().string_value
+        #########################################################################################################################################################################
         # Subscriptionを作成。
+        #########################################################################################################################################################################
+        self.odom_sub = self.create_subscription(nav_msgs.Odometry, odom_topic, self.get_odom, qos_profile)
+        self.odom_ref_sub = self.create_subscription(nav_msgs.Odometry, odom_topic, self.get_odom_ref, qos_profile_sub)
+        
+         #########################################################################################################################################################################
+        
         self.subscription = self.create_subscription(nav_msgs.Path, '/potential_astar_path', self.get_path, qos_profile) #set subscribe pcd topic name
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_odom, qos_profile_sub)
-        self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_odom, qos_profile_sub)
+        #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_odom, qos_profile_sub)
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom_ekf_match', self.get_odom, qos_profile_sub)
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom_ref_slam', self.get_odom_ref, qos_profile_sub)
-        self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_odom_ref, qos_profile_sub)
+        #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_odom_ref, qos_profile_sub)
         self.subscription = self.create_subscription(sensor_msgs.PointCloud2, '/pcd_segment_obs', self.obs_steer, qos_profile)
         self.goal_sub = self.create_subscription(PoseStamped, '/goal_pose', self.goal_pose_callback, qos_profile)
         self.stop_sub = self.create_subscription(String, '/stop_sign_status', self.stop_sign_callback, 10)
@@ -139,16 +164,17 @@ class PathFollower(Node):
         self.rh_obs = 0
         self.lh_obs = 0
         
+        #self.speed_set = 0
         
         ################# IGVC SelfDrive Quolification line stop test #20250530# #################
-        self.sd_quolification_line_stop = 1 #root flag
+        #self.sd_quolification_line_stop = 1 #root flag
         #self.sd_c_obs_stop_dist = 0.305*3 + 0.0254*2 + 0.4 + 0.37# 3feat + 2inch +top +delay
         self.sd_c_obs_stop_dist = 0.305*3 + 0.0254*0 + 0.3 + 0.0# 2feat + 2inch +top +delay
         self.sd_c_obs_slow_dist = self.sd_c_obs_stop_dist + 1 #slow before 1m
         ##########################################################################################   
         
         ################# IGVC SelfDrive III.1 function test #20250531# #################
-        self.sd_line_stop_set = 0 #root flag
+        #self.sd_line_stop_set = 0 #root flag
         self.time_restart = 0
         self.time_restart_count = 50 #n/Hz = s
         self.stop_flag_first_check = 0
@@ -156,7 +182,7 @@ class PathFollower(Node):
         #################################################################################
             
         ################# IGVC SelfDrive V.2 function test #20250601# #################
-        self.sd_human_stop = 0 #root flag
+        #self.sd_human_stop = 0 #root flag
         self.sd_human_stop_dist = 0.305*6 + 0.0254*2 + 0.3 + 0.0# 6feat + 2inch +top +delay
         self.sd_c_obs_stop_dist_buff = self.sd_c_obs_stop_dist
         if self.sd_human_stop == 1:
@@ -164,7 +190,7 @@ class PathFollower(Node):
         #################################################################################
         
         ################# IGVC SelfDrive Full #20250601# #################
-        self.sd_full_flag = 0 #root flag
+        #self.sd_full_flag = 0 #root flag
         self.waypoint_number = 0
         self.sd_full_human_stop = 0  #sub flag
         if self.sd_full_human_stop == 1:
@@ -280,13 +306,13 @@ class PathFollower(Node):
         
         #set speed
         
-        speed_set = 0.5#55 AutoNav 1.10
-        speed = speed_set
+        #self.speed_set = 0.5#55 AutoNav 1.10
+        speed = self.speed_set
         
         ################# IGVC SelfDrive Full #20250601# #################
         if self.sd_full_flag == 1 :
             if self.waypoint_number == 18:
-                speed = speed_set#0.35
+                speed = self.speed_set#0.35
         ##################################################################
         
         points = self.obs_points 
