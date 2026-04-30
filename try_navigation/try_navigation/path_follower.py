@@ -69,10 +69,10 @@ class PathFollower(Node):
         
         # ============== SD function test V.1~2 human stop ==============
         # set up V.1~2 flag (1:use, 0:not use)
-        self.sd_fn_5 = 0
+        self.sd_fn_5 = 1
         # LiDAR human detection area (m) SD V.1~3 variable
         self.human_x_min = 1.0
-        self.human_x_max = 1.8
+        self.human_x_max = 2.0
         self.human_y_min = -0.25
         self.human_y_max = 0.25
 
@@ -83,7 +83,7 @@ class PathFollower(Node):
         
         # ============== SD function test Ⅲ.1~3 stopsign and stopline stop ==============
         # set up Ⅲ.1~3 flag (1:use, 0:not use)
-        self.sd_fn_3 = 1
+        self.sd_fn_3 = 0
         
         # LiDAR stop detection area (m) SD Ⅲ.1~3 variable
         self.stop_line_x_min = -0.4
@@ -652,15 +652,16 @@ class PathFollower(Node):
                 self.stop_flag = 0
                 self.stop_sign_flag = 0
                 self.stop_line_flag = 0
-                self.time_restart_count = 50
+                self.time_restart_count = 100
                 self.whiteline_detection_done = False
 
         # SD function test V.1~2 human stop
         if self.sd_fn_5 == 1:
             if self.mannequin_flag == 1:
-                self.get_logger().info("camera detect mannequin")
+                #self.get_logger().info("camera detect mannequin")
                 if self.human_obs_flag == 1:
-                    self.get_logger().info("Lidar detect mannequin")
+                    #self.get_logger().info("Lidar detect mannequin")
+                    self.get_logger().info("SSSSSSSSSStop!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                     self.stop_flag = 1
                     self.stop_flag_first_check = 1
                     self.time_restart = 1
@@ -676,6 +677,7 @@ class PathFollower(Node):
                 self.stop_flag = 0
                 self.mannequin_flag = 0
                 self.human_obs_flag = 0
+                self.time_restart_count = 100
                 self.mannequin_detection_done = False
 
 
