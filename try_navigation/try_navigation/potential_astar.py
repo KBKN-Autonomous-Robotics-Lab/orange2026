@@ -415,10 +415,12 @@ class PotentialAStar(Node):
         # ===== 白線の使い分け =====
         if self.functions_test == 1:
             # autonav
-            if white_line_local.shape[1] > 0:
-                obs_points = np.insert(
-                    obs_points, len(obs_points[0, :]), white_line_local.T, axis=1
-                )
+    	    # 全白線 white_lines も waypoint ごとの設定で見る/見ないを決める
+    	    if self.obs_info[self.waypoint_number][self.whiteline_info] == 1:
+    	        if white_line_local.shape[1] > 0:
+    	            obs_points = np.insert(
+    	                obs_points, len(obs_points[0, :]), white_line_local.T, axis=1
+    	            )
 
         else:
             # selfdrive
