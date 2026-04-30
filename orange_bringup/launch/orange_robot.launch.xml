@@ -19,7 +19,7 @@
   <arg name="cmd_dist_topic" default="/pos/cmd_dist"/>
   <arg name="odom_topic" default="/odom"/>
   <arg name="imu_topic" default="/imu"/>
-  <arg name="fusion_odom_topic" default="/localization/odom"/>
+  <arg name="imu_odom_topic" default="/odom/wheel_imu"/>
   <arg name="ekf_publish_TF" default="false"/>
   <arg name="hokuyo_scan_topic" default="/hokuyo_scan"/>
   <arg name="velodyne_scan_topic" default="/velodyne_scan"/>
@@ -83,7 +83,7 @@
   <!--<include file="$(find-pkg-share orange_sensor_tools)/launch/localization.launch.xml">
     <arg name="odom_in" value="$(var odom_topic)"/>
     <arg name="imu_in" value="$(var imu_topic)"/>
-    <arg name="fusion_odom_out" value="$(var fusion_odom_topic)"/>
+    <arg name="fusion_odom_out" value="$(var imu_odom_topic)"/>
   </include>-->
   <!-- GPSposition_publisher -->
   <!-- initial heading:housei nakaniwa=179.169287 tsukuba= 276.5 -->
@@ -195,7 +195,7 @@
   <!-- led_node -->
   <node pkg="orange_sensor_tools" exec="led_node">
     <param name="use_sim_time" value="$(var use_sim_time)"/>
-    <param name="serial_port" value="/dev/sensors/LED"/>
+    <param name="serial_port" value="/dev/LED"/>
     <param name="baud_rate" value="115200"/>
     <param name="nav_topic" value="$(var nav_topic)"/>
     <param name="estop_topic" value="$(var estop_topic)"/>
