@@ -135,7 +135,7 @@ class PotentialAStar(Node):
         self.obs_flag = 0   # 0: バレルなし, 1: バレルあり
         
         #DRIVE MODEF
-        self.functions_test = 0 #autonav:1 selfdrive:0
+        self.functions_test = 1 #autonav:1 selfdrive:0
         
         #obs info for SELF DRIVE
         self.tire_info        = 0
