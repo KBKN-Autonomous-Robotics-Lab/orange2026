@@ -25,14 +25,14 @@ def generate_launch_description():
     odom = LaunchConfiguration('odom')
     declare_odom_arg = DeclareLaunchArgument(
         'odom',
-        default_value='/odom/wheel_imu',
+        default_value='/odom/wheel_imu',#/odom/wheel_imu
         description='Odometry topic name'
     )
     # IGVC SelfDrive Quolification line stop test
     sd_quolification_line_stop = LaunchConfiguration('sd_quolification_line_stop')
     sd_quolification_line_stop_arg = DeclareLaunchArgument(
         'sd_quolification_line_stop',
-        default_value='0',
+        default_value='1',
         description='sd_quolification_line_stop name'
     )
     # IGVC SelfDrive III.1 function test
@@ -60,7 +60,7 @@ def generate_launch_description():
     speed_set = LaunchConfiguration('speed_set')
     speed_set_arg = DeclareLaunchArgument(
         'speed_set',
-        default_value='0.2',
+        default_value='0.55',
         description='speed_set name'
     )
     #DRIVE MODE #autonav:1 selfdrive:0
@@ -188,6 +188,7 @@ def generate_launch_description():
             executable='reflection_to_pcd',
             name='reflection_to_pcd',
             output='screen',
+            parameters=[{'odom': odom}],
             arguments=[],
         ),
         #takamori Selfdrive

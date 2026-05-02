@@ -60,14 +60,14 @@ def generate_launch_description():
     speed_set = LaunchConfiguration('speed_set')
     speed_set_arg = DeclareLaunchArgument(
         'speed_set',
-        default_value='0.55',
+        default_value='1.10',
         description='speed_set name'
     )
     #DRIVE MODE #autonav:1 selfdrive:0
     functions_test = LaunchConfiguration('functions_test')
     functions_test_arg = DeclareLaunchArgument(
         'functions_test',
-        default_value='0',
+        default_value='1',
         description='functions_test name'
     )
     # IGVC SelfDrive Quolification line stop test shougaubutu shoukyo
@@ -188,6 +188,7 @@ def generate_launch_description():
             executable='reflection_to_pcd',
             name='reflection_to_pcd',
             output='screen',
+            parameters=[{'odom': odom}],
             arguments=[],
         ),
         #takamori Selfdrive
