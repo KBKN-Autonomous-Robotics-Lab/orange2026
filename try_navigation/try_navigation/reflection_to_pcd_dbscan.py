@@ -82,7 +82,11 @@ class ReflectionIntensityMap(Node):
         
         #self.white_buff = np.array([[],[],[],[]]);
         self.white_buff = np.array([[],[],[],[],[]]);
-        self.duration = 4.0  # time for buff white_buff
+        self.duration = 3.0  # time for buff white_buff
+
+        # DBSCAN後に白線と判定された点を一定時間残すためのバッファ
+        self.white_result_buff = np.array([[], [], [], [], []])  # x, y, z, intensity, time
+        self.white_result_duration = 3.0  # 何秒残すか。
 
         #パラメータ
         #odom positon init
@@ -135,10 +139,10 @@ class ReflectionIntensityMap(Node):
         self.map_place_x = -0 #auto nav -0 self drive  range 12  x 0
         self.map_place_y = 14.1 # autona14 self drive   range 12 y 24.1
 
-        self.intensity_threshold = 45.0  #反射強度閾値
-        self.dbscan_eps = 0.15
-        self.dbscan_min_samples = 6
-        self.cluster_size_threshold = 20
+        self.intensity_threshold = 45.0         #反射強度閾値
+        self.dbscan_eps = 0.20                  #30cm以内の点を近い点として見る
+        self.dbscan_min_samples = 6             #近くに6点以上あればクラスタとして成立
+        self.cluster_size_threshold = 25
 
         self.get_logger().info("reflection_to_pcd_dbscan started")
         
@@ -411,16 +415,37 @@ class ReflectionIntensityMap(Node):
             else:
                 self.get_logger().info("dashed clusters: 0")
 
-            # ===== 全白線 publish =====
+            # ===== 全白線 publish（DBSCAN後の白線を一定時間残す） =====
             all_clusters = solid_clusters + dashed_clusters
 
+            # 現在時刻
+            current_time = t_stamp.sec + t_stamp.nanosec * 1e-9
+
+            # 古いDBSCAN後白線を削除
+            if self.white_result_buff.shape[1] > 0:
+                valid = self.white_result_buff[4, :] > (current_time - self.white_result_duration)
+                self.white_result_buff = self.white_result_buff[:, valid]
+
+            # 今回DBSCANで白線と判定された点を追加
             if len(all_clusters) > 0:
-                all_points = np.hstack(all_clusters)
-                self.get_logger().info(f"white_lines total: {all_points.shape[1]}")
-                all_msg = point_cloud_intensity_msg(all_points.T, t_stamp, 'odom')
+                all_points = np.hstack(all_clusters)  # x, y, z, intensity
+
+                time_array = np.full((1, all_points.shape[1]), current_time)
+                all_points_with_time = np.vstack((all_points, time_array))
+
+                if self.white_result_buff.shape[1] == 0:
+                    self.white_result_buff = all_points_with_time
+                else:
+                    self.white_result_buff = np.hstack((self.white_result_buff, all_points_with_time))
+
+            # 蓄積されたDBSCAN後白線をpublish
+            if self.white_result_buff.shape[1] > 0:
+                publish_points = self.white_result_buff[:4, :]
+                self.get_logger().info(f"white_lines buff total: {publish_points.shape[1]}")
+                all_msg = point_cloud_intensity_msg(publish_points.T, t_stamp, 'odom')
                 self.white_line.publish(all_msg)
             else:
-                self.get_logger().info("white_lines: 0")
+                self.get_logger().info("white_lines buff: 0")
 
         except Exception as e:
             self.get_logger().error(f"DBSCAN処理中にエラーが発生しました: {e}")
