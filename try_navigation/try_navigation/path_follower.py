@@ -61,7 +61,7 @@ class PathFollower(Node):
         #########################################################################################################################################################################
         
         ############### add_back_flag ####################################
-        self.declare_parameter('sd_back_flag','0')
+        self.declare_parameter('sd_back_flag',0)
         self.sd_back_flag = self.get_parameter('sd_back_flag').get_parameter_value().integer_value
        
         # Subscriptionを作成。
@@ -311,12 +311,7 @@ class PathFollower(Node):
         target_rad = math.atan2(relative_point_rot[1], relative_point_rot[0])
         target_theta = (target_rad) * (180 / math.pi)
         
-        ############### add_back_flag ####################################
-        if self.sd_back_flag == 1 :
-           relative_point_rot, t_point_rot_matrix = rotation_xyz(relative_point, theta_x, theta_y, -reverse_theta_z)
-           #twist_msg.angular.z = target_rad_pd  # 角速度 (rad/s)
-           twist_msg.linear.x = -speed #0.3  # 前進速度 (m/s)   
-        ##################################################################
+
         #set speed
         
         #self.speed_set = 0.5#55 AutoNav 1.10
@@ -537,6 +532,13 @@ class PathFollower(Node):
         
         self.cmd_vel_publisher.publish(twist_msg)
         #self.get_logger().info('Publishing cmd_vel: linear.x = %f, angular.z = %f : %f deg' % (twist_msg.linear.x, twist_msg.angular.z, math.degrees(twist_msg.angular.z)))
+        
+        ############### add_back_flag ####################################
+        if self.sd_back_flag == 1 :
+           relative_point_rot, t_point_rot_matrix = rotation_xyz(relative_point, theta_x, theta_y, -reverse_theta_z)
+           #twist_msg.angular.z = target_rad_pd  # 角速度 (rad/s)
+           twist_msg.linear.x = -speed #0.3  # 前進速度 (m/s)   
+        ##################################################################
         
     def set_target_rad(self, path, position_x, position_y, target_dist, theta_x, theta_y, theta_z):
         path_x_diff = path[0,:] - position_x
