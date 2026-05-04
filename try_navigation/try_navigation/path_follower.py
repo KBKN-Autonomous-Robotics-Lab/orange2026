@@ -69,7 +69,7 @@ class PathFollower(Node):
         
         # ============== SD function test V.1~2 human stop ==============
         # set up V.1~2 flag (1:use, 0:not use)
-        self.sd_fn_5 = 1
+        self.sd_fn_5 = 0
         # LiDAR human detection area (m) SD V.1~3 variable
         self.human_x_min = 1.0
         self.human_x_max = 2.0
