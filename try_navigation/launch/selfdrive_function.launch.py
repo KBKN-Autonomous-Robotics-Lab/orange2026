@@ -53,6 +53,16 @@ def generate_launch_description():
         default_value='0',
         description='sd_full_flag name'
     )
+    
+    # IGVC SD back flag
+    sd_back_flag = LaunchConfiguration('sd_back_flag')
+    sd_back_flag_arg = DeclareLaunchArgument(
+        'sd_back_flag',
+        default_value='0',
+        description='sd_back_flag name'
+    )
+    
+    
     #base speed 0.55 or 1.10
     speed_set = LaunchConfiguration('speed_set')
     speed_set_arg = DeclareLaunchArgument(
@@ -77,7 +87,7 @@ def generate_launch_description():
     ##################################################################################################################################
     return LaunchDescription([
     
-        declare_odom_arg, sd_quolification_line_stop_arg, sd_line_stop_set_arg, sd_human_stop_arg, sd_full_flag_arg, speed_set_arg,  functions_test_arg, sd_line_stop_test_arg,
+        declare_odom_arg, sd_quolification_line_stop_arg, sd_line_stop_set_arg, sd_human_stop_arg, sd_full_flag_arg, sd_back_flag_arg, speed_set_arg,  functions_test_arg, sd_line_stop_test_arg,
     
         #rviz2
         Node(package='rviz2',
@@ -169,6 +179,7 @@ def generate_launch_description():
                         {'sd_line_stop_set': sd_line_stop_set},
                         {'sd_human_stop': sd_human_stop},
                         {'sd_full_flag': sd_full_flag},
+                        {'sd_back_flag': sd_back_flag},
                         {'speed_set': speed_set}],
             arguments=[],
         ),
