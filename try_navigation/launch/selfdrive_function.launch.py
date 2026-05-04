@@ -5,6 +5,9 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
     rviz_config_dir = os.path.join(
@@ -22,14 +25,14 @@ def generate_launch_description():
     odom = LaunchConfiguration('odom')
     declare_odom_arg = DeclareLaunchArgument(
         'odom',
-        default_value='/odom/wheel_imu',
+        default_value='/odom/wheel_imu',#/odom/wheel_imu
         description='Odometry topic name'
     )
     # IGVC SelfDrive Quolification line stop test
     sd_quolification_line_stop = LaunchConfiguration('sd_quolification_line_stop')
     sd_quolification_line_stop_arg = DeclareLaunchArgument(
         'sd_quolification_line_stop',
-        default_value='0',
+        default_value='1',
         description='sd_quolification_line_stop name'
     )
     # IGVC SelfDrive III.1 function test
@@ -196,6 +199,7 @@ def generate_launch_description():
             executable='reflection_to_pcd',
             name='reflection_to_pcd',
             output='screen',
+            parameters=[{'odom': odom}],
             arguments=[],
         ),
         #takamori Selfdrive
