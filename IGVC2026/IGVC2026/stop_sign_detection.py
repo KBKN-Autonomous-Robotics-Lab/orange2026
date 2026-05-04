@@ -133,7 +133,7 @@ class StopsignDetection(Node):
                                 continue
                             self.get_logger().info(f'OCR検出結果: {text} → 正規化: {normalized_text} (信頼度: {confidence:.2f})')
 
-                            if normalized_text == "stop" and confidence > 0.8:
+                            if normalized_text == "stop" and confidence > 0.5:
                                 stop_sign_detected = True
                     else:
                         stop_sign_detected = False

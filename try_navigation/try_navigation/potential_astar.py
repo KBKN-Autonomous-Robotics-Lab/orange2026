@@ -155,9 +155,9 @@ class PotentialAStar(Node):
             [   0,      0,    0,       1,        0,        1,          0], # waypoint  1 front r lane
             [   0,      0,    0,       0,        1,        0,          1], # waypoint  2 curve
             [   0,      0,    0,       0,        1,        0,          1], # waypoint  3 front barrel
-            [   0,      0,    0,       0,        0,        1,          0], # waypoint  4 next barrel :lanechange
+            [   0,      0,    0,       0,        1,        1,          0], # waypoint  4 next barrel :lanechange
             [   0,      0,    0,       0,        1,        1,          0], # waypoint  5 front barrel
-            [   0,      0,    0,       0,        0,        1,          0], # waypoint  6 next barrel :lanechange
+            [   0,      0,    0,       0,        1,        1,          0], # waypoint  6 next barrel :lanechange
             [   0,      0,    0,       2,        1,        0,          1], # waypoint  7 front stop
             [   0,      0,    0,       2,        0,        1,          0], # waypoint  8 intersection
             [   0,      0,    0,       0,        0,        0,          0], # waypoint  9 front stop
