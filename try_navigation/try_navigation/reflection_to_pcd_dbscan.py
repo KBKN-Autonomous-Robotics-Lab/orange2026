@@ -86,7 +86,7 @@ class ReflectionIntensityMap(Node):
 
         # DBSCAN後に白線と判定された点を一定時間残すためのバッファ
         self.white_result_buff = np.array([[], [], [], [], []])  # x, y, z, intensity, time
-        self.white_result_duration = 3.5  # 何秒残すか。
+        self.white_result_duration = 2.0  # 何秒残すか。
 
         #パラメータ
         #odom positon init
@@ -139,7 +139,7 @@ class ReflectionIntensityMap(Node):
         self.map_place_x = -0 #auto nav -0 self drive  range 12  x 0
         self.map_place_y = 14.1 # autona14 self drive   range 12 y 24.1
 
-        self.intensity_threshold = 33.0         #反射強度閾値
+        self.intensity_threshold = 40.0         #反射強度閾値
         self.dbscan_eps = 0.30                  #30cm以内の点を近い点として見る
         self.dbscan_min_samples = 6             #近くに6点以上あればクラスタとして成立
         self.cluster_size_threshold = 20
@@ -390,7 +390,7 @@ class ReflectionIntensityMap(Node):
                 #    continue
 
                 # 分類
-                if cluster_size > 180 and (spread_x > 0.5 or spread_y > 0.5):
+                if cluster_size > 1000 and (spread_x > 0.5 or spread_y > 0.5):
                     self.get_logger().info(f"solid cluster {label}: {cluster_size} points")
                     solid_clusters.append(cluster)
                 elif cluster_size > 30:

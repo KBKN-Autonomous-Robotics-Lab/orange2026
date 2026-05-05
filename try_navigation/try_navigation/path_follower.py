@@ -83,7 +83,7 @@ class PathFollower(Node):
         
         # ============== SD function test Ⅲ.1~3 stopsign and stopline stop ==============
         # set up Ⅲ.1~3 flag (1:use, 0:not use)
-        self.sd_fn_3 = 1
+        self.sd_fn_3 = 0
         
         # LiDAR stop detection area (m) SD Ⅲ.1~3 variable
         self.stop_line_x_min = 0.1
@@ -183,7 +183,7 @@ class PathFollower(Node):
         
         
         ################# IGVC SelfDrive Quolification line stop test #20250530# #################
-        self.sd_quolification_line_stop = 0 #root flag
+        self.sd_quolification_line_stop = 1 #root flag
         #self.sd_c_obs_stop_dist = 0.305*3 + 0.0254*2 + 0.4 + 0.37# 3feat + 2inch +top +delay
         self.sd_c_obs_stop_dist = 0.305*2 + 0.0254*2 + 0.4 + 0.37# 2feat + 2inch +top +delay 停止距離
         self.sd_c_obs_slow_dist = self.sd_c_obs_stop_dist + 1 #slow before 1m 
