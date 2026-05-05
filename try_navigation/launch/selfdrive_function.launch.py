@@ -61,7 +61,7 @@ def generate_launch_description():
     sd_back_flag = LaunchConfiguration('sd_back_flag')
     sd_back_flag_arg = DeclareLaunchArgument(
         'sd_back_flag',
-        default_value='0',
+        default_value='1',
         description='sd_back_flag name'
     )
     

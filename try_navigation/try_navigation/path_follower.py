@@ -535,9 +535,9 @@ class PathFollower(Node):
         
         ############### add_back_flag ####################################
         if self.sd_back_flag == 1 :
-           relative_point_rot, t_point_rot_matrix = rotation_xyz(relative_point, theta_x, theta_y, -reverse_theta_z)
-           #twist_msg.angular.z = target_rad_pd  # 角速度 (rad/s)
-           twist_msg.linear.x = -speed #0.3  # 前進速度 (m/s)   
+            relative_point_rot, t_point_rot_matrix = rotation_xyz(relative_point, theta_x, theta_y, -reverse_theta_z)
+            #twist_msg.angular.z = target_rad_pd  # 角速度 (rad/s)
+            twist_msg.linear.x = -speed #0.3  # 前進速度 (m/s)   
         ##################################################################
         
     def set_target_rad(self, path, position_x, position_y, target_dist, theta_x, theta_y, theta_z):
