@@ -60,8 +60,8 @@ class PotentialAStar(Node):
         
         # Subscriptionを作成。CustomMsg型,'/livox/lidar'という名前のtopicをsubscribe。
         self.subscription = self.create_subscription(sensor_msgs.PointCloud2, '/pcd_segment_obs', self.potential_astar, qos_profile)
+        #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_odom, qos_profile_sub)
         self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_odom, qos_profile_sub)
-        #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom', self.get_odom, qos_profile_sub)
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom_fast', self.get_odom, qos_profile_sub)
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom_ekf_match', self.get_odom, qos_profile_sub)
         self.subscription = self.create_subscription(geometry_msgs.PoseArray,'/current_waypoint', self.get_waypoint, qos_profile_sub)
@@ -116,10 +116,7 @@ class PotentialAStar(Node):
         self.waypoint_xy = np.array([[10],[0],[0]])
         self.waypoint_number = 0
         self.pothole_number = 0 #functions test
-        self.white_number = 1 # front stop:1 lanechange:0 Q1:0 
-        self.right_number = 0 # front stop:0 lanechange:1 Q1:0
-        self.left_number = 0 # front stop:None lanechange:1 Q1:0
-        self.dot_number = 0 # front stop:0 lanechange:0 Q1:0
+        self.white_number = 0 # front stop:1 lanechange:0 Q1:0 
         
         #map_obs
         self.map_obs_points = np.array([[],[],[]])
@@ -138,7 +135,7 @@ class PotentialAStar(Node):
         self.obs_flag = 0   # 0: バレルなし, 1: バレルあり
         
         #DRIVE MODEF
-        self.functions_test = 0 #autonav:1 selfdrive:0
+        self.functions_test = 1 #autonav:1 selfdrive:0
         
         #obs info for SELF DRIVE
         self.tire_info        = 0
@@ -151,29 +148,33 @@ class PotentialAStar(Node):
         self.obs_info = [
             #   0       1     2        3         4         5           6
             #tire pothole human stopsign whiteline solidline  dashedline
-            [   0,      0,    0,       1,        0,        1,          0], # waypoint  0 front stop
-            [   0,      0,    0,       1,        0,        1,          0], # waypoint  1 front r lane
-            [   0,      0,    0,       0,        0,        1,          0], # waypoint  2 curve
-            [   0,      0,    0,       0,        0,        1,          0], # waypoint  3 front barrel
-            [   0,      0,    0,       0,        0,        1,          0], # waypoint  4 next barrel :lanechange
-            [   0,      0,    0,       0,        0,        1,          0], # waypoint  5 front barrel
-            [   0,      0,    0,       0,        0,        1,          0], # waypoint  6 next barrel :lanechange
-            [   0,      0,    0,       2,        0,        1,          1], # waypoint  7 front stop
-            [   0,      0,    0,       2,        0,        1,          0], # waypoint  8 intersection
-            [   0,      0,    0,       0,        0,        0,          0], # waypoint  9 front stop
-            [   0,      0,    1,       0,        0,        1,          0], # waypoint 10 intersection :human
-            [   0,      0,    1,       0,        1,        0,          0], # waypoint 11 front r lane
-            [   0,      0,    0,       0,        1,        0,          1], # waypoint 12 curve
-            [   0,      0,    0,       0,        1,        0,          1], # waypoint 13 front pothole
-            [   0,      1,    0,       0,        0,        1,          0], # waypoint 14 next pothole :lanechange
-            [   0,      0,    0,       0,        1,        0,          1], # waypoint 15 front tire
-            [   1,      0,    0,       0,        0,        1,          0], # waypoint 16 next tire :lanechange
-            [   0,      0,    0,       0,        1,        0,          1], # waypoint 17 curve
-            [   0,      0,    0,       3,        1,        0,          1], # waypoint 18 front stop
-            [   0,      0,    0,       3,        0,        1,          0], # waypoint 19 intersection
-            [   0,      0,    0,       0,        1,        0,          0], # waypoint 20 front r lane
-            [   0,      0,    0,       0,        1,        0,          0]  # waypoint 21 GOAL!!!!!!
+            [   0,      0,    0,       1,        1,        1,          0], # waypoint  0 front stop
+            [   0,      0,    0,       1,        1,        1,          0], # waypoint  1 front r lane
+            [   0,      0,    0,       0,        1,        1,          1], # waypoint  2 curve
+            [   0,      0,    0,       0,        1,        1,          1], # waypoint  3 front barrel
+            [   0,      0,    0,       0,        1,        1,          0], # waypoint  4 next barrel :lanechange
+            [   0,      0,    0,       0,        1,        1,          0], # waypoint  5 front barrel
+            [   0,      0,    0,       0,        1,        1,          0], # waypoint  6 next barrel :lanechange
+            [   0,      0,    0,       2,        1,        1,          1], # waypoint  7 front stop
+            [   0,      0,    0,       2,        1,        1,          0], # waypoint  8 intersection
+            [   0,      0,    0,       0,        1,        1,          0], # waypoint  9 front stop
+            [   0,      0,    1,       0,        1,        1,          0], # waypoint 10 intersection :human
+            [   0,      0,    1,       0,        1,        1,          0], # waypoint 11 front r lane
+            [   0,      0,    0,       0,        1,        1,          1], # waypoint 12 curve
+            [   0,      0,    0,       0,        1,        1,          1], # waypoint 13 front pothole
+            [   0,      1,    0,       0,        1,        1,          0], # waypoint 14 next pothole :lanechange
+            [   0,      0,    0,       0,        1,        1,          1], # waypoint 15 front tire
+            [   1,      0,    0,       0,        1,        1,          0], # waypoint 16 next tire :lanechange
+            [   0,      0,    0,       0,        1,        1,          1], # waypoint 17 curve
+            [   0,      0,    0,       3,        1,        1,          1], # waypoint 18 front stop
+            [   0,      0,    0,       3,        1,        1,          0], # waypoint 19 intersection
+            [   0,      0,    0,       0,        1,        1,          0], # waypoint 20 front r lane
+            [   0,      0,    0,       0,        1,        1,          0]  # waypoint 21 GOAL!!!!!!
         ]
+
+
+        #1 → 見る
+        #0 → 見ない
         
         
         ################# IGVC SelfDrive Quolification line stop test #20250530# #################
@@ -330,7 +331,7 @@ class PotentialAStar(Node):
 
         if points.shape[1] > 0:
             front_obs = (
-                (points[0, :] > 0.0) & (points[0, :] < 4.0) &
+                (points[0, :] > 0.0) & (points[0, :] < 5.0) &
                 (np.abs(points[1, :]) < 1.5)
             )
 
@@ -414,27 +415,24 @@ class PotentialAStar(Node):
         # ===== 白線の使い分け =====
         if self.functions_test == 1:
             # autonav
-            if white_line_local.shape[1] > 0:
-                obs_points = np.insert(
-                    obs_points, len(obs_points[0, :]), white_line_local.T, axis=1
-                )
+    	    # 全白線 white_lines も waypoint ごとの設定で見る/見ないを決める
+    	    if self.obs_info[self.waypoint_number][self.whiteline_info] == 1:
+    	        if white_line_local.shape[1] > 0:
+    	            obs_points = np.insert(
+    	                obs_points, len(obs_points[0, :]), white_line_local.T, axis=1
+    	            )
 
         else:
             # selfdrive
-            if self.obs_flag == 1:
-                # 前方に障害物あり → 車線変更したいので実線のみ
-                if solid_line_local.shape[1] > 0:
-                    obs_points = np.insert(
-                        obs_points, len(obs_points[0, :]), solid_line_local.T, axis=1
-                    )
 
-            else:
-                # 前方に障害物なし → 通常走行なので実線と破線
-                if solid_line_local.shape[1] > 0:
-                    obs_points = np.insert(
-                        obs_points, len(obs_points[0, :]), solid_line_local.T, axis=1
-                    )
+            # 実線は常に障害物として見る
+            if solid_line_local.shape[1] > 0:
+                obs_points = np.insert(
+                    obs_points, len(obs_points[0, :]), solid_line_local.T, axis=1
+                )
 
+            # 破線は waypoint ごとの設定で見る/見ないを決める
+            if self.obs_info[self.waypoint_number][self.dashedline_info] == 1:
                 if dashed_line_local.shape[1] > 0:
                     obs_points = np.insert(
                         obs_points, len(obs_points[0, :]), dashed_line_local.T, axis=1
