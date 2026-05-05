@@ -306,18 +306,16 @@ class PathFollower(Node):
         relative_point_x = target_point[0] - position_x
         relative_point_y = target_point[1] - position_y
         relative_point = np.vstack((relative_point_x, relative_point_y, target_point[2]))
-        relative_point_rot, t_point_rot_matrix = rotation_xyz(relative_point, theta_x, theta_y, -theta_z)
+        #relative_point_rot, t_point_rot_matrix = rotation_xyz(relative_point, theta_x, theta_y, -theta_z)
         #relative_point_rot, t_point_rot_matrix = rotation_xyz(relative_point, theta_x, theta_y, -reverse_theta_z)
-        target_rad = math.atan2(relative_point_rot[1], relative_point_rot[0])
-        target_theta = (target_rad) * (180 / math.pi)
-        
         ############### add_back_flag ####################################
         if self.sd_back_flag == 1 :
             relative_point_rot, t_point_rot_matrix = rotation_xyz(relative_point, theta_x, theta_y, -reverse_theta_z) 
         else :
             relative_point_rot, t_point_rot_matrix = rotation_xyz(relative_point, theta_x, theta_y, -theta_z)   
         ##################################################################
-        #set speed
+        target_rad = math.atan2(relative_point_rot[1], relative_point_rot[0])
+        target_theta = (target_rad) * (180 / math.pi)
         
         #self.speed_set = 0.5#55 AutoNav 1.10
         speed = self.speed_set
