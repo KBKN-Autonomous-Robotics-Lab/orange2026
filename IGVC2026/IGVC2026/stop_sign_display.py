@@ -51,7 +51,8 @@ class SignDetection(Node):
         #self.action_client.wait_for_server()
 
         # camera
-        self.cap = cv2.VideoCapture('/dev/sensors/camera', cv2.CAP_V4L2)
+        self.cap = cv2.VideoCapture('/dev/camera', cv2.CAP_V4L2)
+        #self.cap = cv2.VideoCapture('/dev/sensors/camera', cv2.CAP_V4L2)
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -68,11 +69,6 @@ class SignDetection(Node):
         # timer
         self.timer = self.create_timer(1.0, self.image_callback)
 
-        # status 
-        self.previous_status = None
-        self.stop = False
-        self.stop_buffer = []
-        #self.buffer_size = 3
 
 
     def image_callback(self):
@@ -85,34 +81,7 @@ class SignDetection(Node):
         
         results = self.model(frame, verbose=False)
 
-        status, raw_text, stop_sign_img = self.detect_stop_sign(frame, results)
-        """
-        if normalized_text == "stop" and confidence > 0.5:
-            self.stop_buffer.append(True)
-        else:
-            self.stop_buffer.append(False)
-
-        if len(self.stop_buffer) > 5:
-            self.stop_buffer.pop(0)
-        """
-
-        if self.stop_buffer.count(True) > len(self.stop_buffer) / 2:
-            status = "Stop"
-        else:
-            status = "Go"
-
-        if status != self.previous_status:
-            self.get_logger().info(f'Now status: {status}')
-        """
-        if status == "Stop" and self.previous_status != "Stop":
-            self.stop = True
-            self.send_action_request()
-
-        if status == "Go" and self.previous_status == "Stop":
-            self.stop = False
-            self.send_action_request()
-        """
-        self.previous_status = status
+        raw_text, stop_sign_img = self.detect_stop_sign(frame, results)
 
             
 
@@ -122,77 +91,46 @@ class SignDetection(Node):
         cv2.imshow("camera", frame)
         cv2.waitKey(1)
 
-        
     def detect_stop_sign(self, frame, results):
+        crop = None
+
         for result in results:
             for box in result.boxes:
                 cls_id = int(box.cls[0])
                 conf = float(box.conf[0])
+
                 if cls_id == 11 and conf > 0.3:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     w, h = x2 - x1, y2 - y1
+
                     if w * h > 2000:
+                        crop = frame[y1:y2, x1:x2]
                         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                        break
 
-        if frame is not None:
-            ocr_results = self.reader.readtext(frame)
-            #margin = 10
-            #cropped = frame[y1-margin:y2+margin, x1-margin:x2+margin]
-            #ocr_results = self.reader.readtext(cropped)
-            for (bbox, text, confidence) in ocr_results:
-                normalized_text = re.sub(r'[^a-z]', '', text.strip().lower())
-                # 4文字でないものは無視
-                if len(normalized_text) != 4:
-                    continue
+    
+        if crop is None:
+            return "", None
 
-                self.get_logger().info(f'OCR検出結果: {text} → 正規化: {normalized_text} (信頼度: {confidence:.2f})')
+        ocr_results = self.reader.readtext(crop)
 
-                if normalized_text == "stop" and confidence > 0.8:
-                    return "Stop", normalized_text, frame  # topic stop GUI words
+        for (bbox, text, confidence) in ocr_results:
+            normalized_text = re.sub(r'[^a-z]', '', text.strip().lower())
 
-                if normalized_text in ["soup", "igvc"]:
-                    return "Go", normalized_text, frame
+            if len(normalized_text) != 4:
+                continue
 
-            return "Go", "", None
-        else:
-            return "Go", "", None  
-    """
-    def delayed_action_send(self):
-        self.send_action_request()
+            self.get_logger().info(
+                f'OCR検出結果: {text} → 正規化: {normalized_text} (信頼度: {confidence:.2f})'
+            )
 
-    def send_action_request(self):
-        goal_msg = StopFlag.Goal()
+            return normalized_text, frame
 
-        if self.stop:
-            goal_msg.a = 1
+        return "", None
 
-        else:
-            goal_msg.a = 0
-
-        self.action_client.wait_for_server()
-        self.future = self.action_client.send_goal_async(goal_msg, feedback_callback=self.feedback_callback)
-        self.future.add_done_callback(self.response_callback)
-
-    def feedback_callback(self, feedback):
-        self.get_logger().info(f"Received feedback: {feedback.feedback.rate}")
-
-    # 結果を受け取るコールバック関数
-    def response_callback(self, future):
-        goal_handle = future.result()
-        if not goal_handle.accepted:
-            self.get_logger().info("Goal rejected")
-            return
-
-        self.get_logger().info("Goal accepted")
-
-        self.result_future = goal_handle.get_result_async()
-        self.result_future.add_done_callback(self.result_callback)
         
-    # 結果のコールバック
-    def result_callback(self, future):
-        result = future.result().result
-        self.get_logger().info(f"Result: {result.sum}")
-    """
+    
+ 
 
 def main(args=None):
     rclpy.init(args=args)

@@ -121,11 +121,12 @@ class StopsignDetection(Node):
                 if cls_id == 11 and conf > 0.3:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     w, h = x2 - x1, y2 - y1
+                    crop = frame[y1:y2, x1:x2]
                     if w * h > 2000:
                         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                     
                     if frame is not None:
-                        ocr_results = self.reader.readtext(frame)
+                        ocr_results = self.reader.readtext(crop)
 
                         for (bbox, text, confidence) in ocr_results:
                             normalized_text = re.sub(r'[^a-z]', '', text.strip().lower())
