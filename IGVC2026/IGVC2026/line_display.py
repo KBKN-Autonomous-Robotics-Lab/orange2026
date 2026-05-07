@@ -31,10 +31,10 @@ class WhiteLineDetection(Node):
         # =============== yellow line ===================
         # ノイズ除去
         yellow_blur = cv2.GaussianBlur(frame, (5, 5), 0)
-        hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         # yellowの抽出
-        lower_yellow = np.array([0, 100, 100])
-        upper_yellow = np.array([80, 255, 255])
+        lower_yellow = np.array([15, 100, 100])
+        upper_yellow = np.array([40, 255, 255])
         yellow_mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
 
         lower_white = np.array([0, 0, 200])
