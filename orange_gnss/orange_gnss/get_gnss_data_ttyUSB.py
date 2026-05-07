@@ -4,6 +4,7 @@ import rclpy
 import serial
 import tkinter as tk
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy, QoSReliabilityPolicy
 from sensor_msgs.msg import Imu, NavSatFix, NavSatStatus
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Header, String
@@ -23,8 +24,8 @@ class GPSData(Node):
         self.declare_parameter('baud', 115200)
         self.declare_parameter('country_id', 0)
         self.declare_parameter('heading', 0.0)
-        self.declare_parameter('start_lat', 35.425952230280004) # tsukuba start point right 36.04974095972727, 140.04593633886364 , left 36.04976195993636, 140.04593755179093/nakaniwa 35.4257898377487,139.313807281254 /35.425952230280004, 139.31380123427
-        self.declare_parameter('start_lon', 139.31380123427)
+        self.declare_parameter('start_lat', 0.0) # tsukuba start point right 36.04974095972727, 140.04593633886364 , left 36.04976195993636, 140.04593755179093/nakaniwa 35.4257898377487,139.313807281254 /35.425952230280004, 139.31380123427
+        self.declare_parameter('start_lon', 0.0)
 
         self.dev_name = self.get_parameter('port').get_parameter_value().string_value
         self.serial_baud = self.get_parameter('baud').get_parameter_value().integer_value
@@ -39,6 +40,24 @@ class GPSData(Node):
         self.start_GPS_coordinate = [self.start_lat, self.start_lon]
         self.fix_data = None
         self.count = 0
+        
+        # gps_waypoint.py から /init_gps を受け取ったかどうか
+        self.received_init_gps = False
+
+# /init_gps は1回だけ送られる可能性があるので TRANSIENT_LOCAL にする
+        init_gps_qos = QoSProfile(
+            history=QoSHistoryPolicy.KEEP_LAST,
+            reliability=QoSReliabilityPolicy.RELIABLE,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            depth=1
+        )
+
+        self.init_gps_sub = self.create_subscription(
+            NavSatFix,
+            '/init_gps',
+            self.init_gps_callback,
+            init_gps_qos
+        )
         
         self.initialized = False  # 平均初期座標が取得できたかどうか
 
@@ -84,6 +103,16 @@ class GPSData(Node):
         os.makedirs(self.run_csv_dir, exist_ok=True)
         self._open_new_csv()
     
+    def init_gps_callback(self, msg):
+    self.start_lat = msg.latitude
+    self.start_lon = msg.longitude
+    self.start_GPS_coordinate = [self.start_lat, self.start_lon]
+    self.received_init_gps = True
+
+    self.get_logger().info(
+        f"Received /init_gps: start_lat={self.start_lat}, start_lon={self.start_lon}"
+    )
+    
     # service client
     def send_request(self):
         request = Avglatlon.Request()
@@ -117,6 +146,12 @@ class GPSData(Node):
 
     # gps data collect
     def start_gps_acquisition(self):
+        if not self.received_init_gps:
+        self.get_logger().warn(
+            "まだ /init_gps を受信していません。gps_waypoint.py から init_lat/init_lon を受け取ってから開始してください。"
+        )
+        return
+        
         if not self.is_acquiring:
             self.is_acquiring = True
             self.gps_acquisition_thread = threading.Thread(target=self.acquire_gps_data)
