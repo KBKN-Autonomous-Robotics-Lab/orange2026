@@ -52,13 +52,15 @@ setup(
             'waypoint_manager = try_navigation.waypoint_manager:main',
             'reflection_intensity_map = try_navigation.reflection_intensity_map:main',
             'reflection_to_pcd = try_navigation.reflection_to_pcd:main',
+            'reflection_to_pcd_dbscan = try_navigation.reflection_to_pcd_dbscan:main',
             'self_drive_line = try_navigation.self_drive_line:main',
             'odom_wheel = try_navigation.odom_wheel:main',
             'waypoint_manager_maprun = try_navigation.waypoint_manager_maprun:main',
             'ekf_myself_match = try_navigation.ekf_myself_match:main',
             'ekf_myself_gps = try_navigation.ekf_myself_gps:main',
             'ekf_myself_odom = try_navigation.ekf_myself_odom:main',
-            'map_check = try_navigation.map_check:main'
+            'map_check = try_navigation.map_check:main',
+            'intensity_checker = try_navigation.intensity_checker:main',
         ],
     },
 )

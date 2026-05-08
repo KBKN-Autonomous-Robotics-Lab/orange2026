@@ -15,7 +15,12 @@ from my_msgs.action import StopFlag ####
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Int32
 from std_msgs.msg import String
-
+from visualization_msgs.msg import Marker
+from geometry_msgs.msg import Point
+from tf_transformations import euler_from_quaternion
+from rclpy.duration import Duration
+from sensor_msgs.msg import PointCloud2, PointField
+import struct
 # C++と同じく、Node型を継承します。
 class PathFollower(Node):
     # コンストラクタです、PcdRotationクラスのインスタンスを作成する際に呼び出されます。
@@ -40,17 +45,59 @@ class PathFollower(Node):
         self.server = ActionServer(self,
             StopFlag, "stop_flag", self.listener_callback)
         
+        #########################################################################################################################################################################
+        self.declare_parameter('odom', '/odom/wheel_imu')
+        odom_topic = self.get_parameter('odom').get_parameter_value().string_value
+
+        self.declare_parameter('sd_quolification_line_stop',0)
+        self.sd_quolification_line_stop = self.get_parameter('sd_quolification_line_stop').get_parameter_value().integer_value
+        
+        self.declare_parameter('sd_line_stop_set',0)
+        self.sd_line_stop_set = self.get_parameter('sd_line_stop_set').get_parameter_value().integer_value
+        
+        self.declare_parameter('sd_human_stop',0)
+        self.sd_human_stop = self.get_parameter('sd_human_stop').get_parameter_value().integer_value
+        
+        self.declare_parameter('sd_full_flag',0)
+        self.sd_full_flag = self.get_parameter('sd_full_flag').get_parameter_value().integer_value
+        
+        self.declare_parameter('speed_set',0.55)
+        self.speed_set = self.get_parameter('speed_set').get_parameter_value().double_value
+
+        self.declare_parameter('sd_back_flag',0)
+        self.sd_back_flag = self.get_parameter('sd_back_flag').get_parameter_value().integer_value 
+
+        self.declare_parameter('sd_fn_5',0)
+        self.sd_fn_5 = self.get_parameter('sd_fn_5').get_parameter_value().integer_value 
+
+        self.declare_parameter('sd_fn_3',0)
+        self.sd_fn_3 = self.get_parameter('sd_fn_3').get_parameter_value().integer_value 
+
+
+
+        #########################################################################################################################################################################
         # Subscriptionを作成。
+        #########################################################################################################################################################################
+        self.odom_sub = self.create_subscription(nav_msgs.Odometry, odom_topic, self.get_odom, qos_profile_sub)
+        self.odom_ref_sub = self.create_subscription(nav_msgs.Odometry, odom_topic, self.get_odom_ref, qos_profile_sub)
+        
+         #########################################################################################################################################################################
+        
         self.subscription = self.create_subscription(nav_msgs.Path, '/potential_astar_path', self.get_path, qos_profile) #set subscribe pcd topic name
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_odom, qos_profile_sub)
-        self.subscription = self.create_subscription(nav_msgs.Odometry,'/fusion/odom', self.get_odom, qos_profile_sub)
+        #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_odom, qos_profile_sub)
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom_ekf_match', self.get_odom, qos_profile_sub)
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom_ref_slam', self.get_odom_ref, qos_profile_sub)
-        self.subscription = self.create_subscription(nav_msgs.Odometry,'/fusion/odom', self.get_odom_ref, qos_profile_sub)
+        #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_odom_ref, qos_profile_sub)
         self.subscription = self.create_subscription(sensor_msgs.PointCloud2, '/pcd_segment_obs', self.obs_steer, qos_profile)
         self.goal_sub = self.create_subscription(PoseStamped, '/goal_pose', self.goal_pose_callback, qos_profile)
         self.stop_sub = self.create_subscription(String, '/stop_sign_status', self.stop_sign_callback, 10)
         self.waypoint_number_subscription = self.create_subscription(Int32,'/waypoint_number', self.get_waypoint_number, qos_profile_sub)
+
+        self.stop_sign_sub = self.create_subscription(String, '/stop_sign_flag', self.stop_sign_flag_callback, 10)
+        self.mannequin_sub = self.create_subscription(String, '/mannequin_flag', self.mannequin_flag_callback, 10)
+        #self.stop_line_sub = self.create_subscription(sensor_msgs.PointCloud2, 'white_line_solid', self.stop_line_pcd, 10)
+        self.stop_line_sub = self.create_subscription(sensor_msgs.PointCloud2, 'white_lines', self.stop_line_pcd, 10)
         self.subscription  # 警告を回避するために設置されているだけです。削除しても挙動はかわりません。
         
         # タイマーを0.05秒（50ミリ秒）ごとに呼び出す
@@ -59,7 +106,41 @@ class PathFollower(Node):
         
         # Publisherを作成
         self.cmd_vel_publisher = self.create_publisher(geometry_msgs.Twist, 'cmd_vel', qos_profile) #set publish pcd topic name
+
+        self.marker_pub = self.create_publisher(Marker, 'lidar_detection_area', 10)
+
+        self.stop_line_pcd_pub = self.create_publisher(PointCloud2, 'stop_line_points', 10)
         
+        # ============== SD function test V.1~2 human stop ==============
+        # set up V.1~2 flag (1:use, 0:not use)
+        #self.sd_fn_5 = 0
+        # LiDAR human detection area (m) SD V.1~3 variable
+        self.human_x_min = 1.0
+        self.human_x_max = 2.4
+        self.human_y_min = -0.25
+        self.human_y_max = 0.25
+
+        # first status init
+        self.mannequin_detection_done = False
+        self.mannequin_flag = 0
+        # ===============================================================
+        
+        # ============== SD function test Ⅲ.1~3 stopsign and stopline stop ==============
+        # set up Ⅲ.1~3 flag (1:use, 0:not use)
+        #self.sd_fn_3 = 0
+        
+        # LiDAR stop detection area (m) SD Ⅲ.1~3 variable
+        self.stop_line_x_min = 0.1
+        self.stop_line_x_max = 0.7
+        self.stop_line_y_min = -0.2
+        self.stop_line_y_max = 0.2
+
+        # first status init
+        self.whiteline_detection_done = False
+        self.stop_line_flag = 0
+        self.stop_sign_flag = 0
+        # ================================================================================
+
         #パラメータ init
         self.path_plan = np.array([[0],[0],[0]])
         
@@ -139,16 +220,17 @@ class PathFollower(Node):
         self.rh_obs = 0
         self.lh_obs = 0
         
+        #self.speed_set = 0
         
         ################# IGVC SelfDrive Quolification line stop test #20250530# #################
-        self.sd_quolification_line_stop = 0 #root flag
+        #self.sd_quolification_line_stop = 1 #root flag
         #self.sd_c_obs_stop_dist = 0.305*3 + 0.0254*2 + 0.4 + 0.37# 3feat + 2inch +top +delay
         self.sd_c_obs_stop_dist = 0.305*3 + 0.0254*0 + 0.3 + 0.0# 2feat + 2inch +top +delay
         self.sd_c_obs_slow_dist = self.sd_c_obs_stop_dist + 1 #slow before 1m
         ##########################################################################################   
         
         ################# IGVC SelfDrive III.1 function test #20250531# #################
-        self.sd_line_stop_set = 0 #root flag
+        #self.sd_line_stop_set = 0 #root flag
         self.time_restart = 0
         self.time_restart_count = 50 #n/Hz = s
         self.stop_flag_first_check = 0
@@ -156,7 +238,7 @@ class PathFollower(Node):
         #################################################################################
             
         ################# IGVC SelfDrive V.2 function test #20250601# #################
-        self.sd_human_stop = 0 #root flag
+        #self.sd_human_stop = 0 #root flag
         self.sd_human_stop_dist = 0.305*6 + 0.0254*2 + 0.3 + 0.0# 6feat + 2inch +top +delay
         self.sd_c_obs_stop_dist_buff = self.sd_c_obs_stop_dist
         if self.sd_human_stop == 1:
@@ -164,7 +246,7 @@ class PathFollower(Node):
         #################################################################################
         
         ################# IGVC SelfDrive Full #20250601# #################
-        self.sd_full_flag = 0 #root flag
+        #self.sd_full_flag = 0 #root flag
         self.waypoint_number = 0
         self.sd_full_human_stop = 0  #sub flag
         if self.sd_full_human_stop == 1:
@@ -179,9 +261,106 @@ class PathFollower(Node):
                 [ 999,  999, 999, 999, 0.0] ]) #end
         self.previous_status = None    
         ##################################################################
-        
+
+    def publish_human_area(self):
+        marker = Marker()
+
+        marker.header.frame_id = "odom"  # ← LiDAR基準ならこれ
+        marker.header.stamp = self.get_clock().now().to_msg()
+
+        marker.ns = "human_area"
+        marker.id = 0
+        marker.type = Marker.CUBE
+        marker.action = Marker.ADD
+
+        # 中心座標
+        marker.pose.position.x = (self.human_x_min + self.human_x_max) / 2
+        marker.pose.position.y = (self.human_y_min + self.human_y_max) / 2
+        marker.pose.position.z = 0.0
+
+        # サイズ
+        marker.scale.x = (self.human_x_max - self.human_x_min)
+        marker.scale.y = (self.human_y_max - self.human_y_min)
+        marker.scale.z = 0.05  # 薄い板
+
+        # 色（半透明）
+        marker.color.r = 1.0
+        marker.color.g = 0.0
+        marker.color.b = 0.0
+        marker.color.a = 0.3
+
+        self.marker_pub.publish(marker)
+
+    
+    def publish_stop_line_area(self):
+        marker = Marker()
+
+        marker.header.frame_id = "odom"  # ←人検知と揃える
+        marker.header.stamp = self.get_clock().now().to_msg()
+
+        marker.ns = "stop_line_area"
+        marker.id = 1   # ← human=0, stop_line=1 にする
+
+        marker.type = Marker.CUBE
+        marker.action = Marker.ADD
+
+        # 中心
+        marker.pose.position.x = (self.stop_line_x_min + self.stop_line_x_max) / 2
+        marker.pose.position.y = (self.stop_line_y_min + self.stop_line_y_max) / 2
+        marker.pose.position.z = 0.05
+
+        # サイズ
+        marker.scale.x = (self.stop_line_x_max - self.stop_line_x_min)
+        marker.scale.y = (self.stop_line_y_max - self.stop_line_y_min)
+        marker.scale.z = 0.02
+
+        # 色（青にすると区別しやすい）
+        marker.color.r = 0.0
+        marker.color.g = 0.0
+        marker.color.b = 1.0
+        marker.color.a = 0.4
+
+        self.marker_pub.publish(marker)
+    
+    def publish_stop_line_points(self, points, header):
+
+        if points.shape[1] == 0:
+            return  # 点がないときは出さない
+
+        msg = PointCloud2()
+        msg.header = header
+
+        msg.height = 1
+        msg.width = points.shape[1]
+
+        msg.fields = [
+            PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
+            PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
+            PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
+        ]
+
+        msg.is_bigendian = False
+        msg.point_step = 12
+        msg.row_step = msg.point_step * points.shape[1]
+        msg.is_dense = True
+
+        buffer = []
+        for i in range(points.shape[1]):
+            buffer.append(struct.pack('fff',
+                float(points[0, i]),
+                float(points[1, i]),
+                float(points[2, i])
+            ))
+
+        msg.data = b''.join(buffer)
+
+        self.stop_line_pcd_pub.publish(msg)
+
+
+
+
     # actionリクエストの受信時に呼ばれる(tuika)
-    def listener_callback(self, goal_handle):
+    """def listener_callback(self, goal_handle):
         self.get_logger().info(f"Received goal with a: {goal_handle.request.a}, b: {goal_handle.request.b}")
         
         # クライアントから送られたaをstop_flagに代入
@@ -200,8 +379,53 @@ class PathFollower(Node):
         goal_handle.succeed()
         result = StopFlag.Result()
         result.sum = goal_handle.request.a + goal_handle.request.b  # 結果の計算
-        return result         
+        return result
+    """ 
+###############################################################################################     
+    def listener_callback(self, goal_handle):
+        a = goal_handle.request.a
+        b = goal_handle.request.b
+        self.get_logger().info(f"Received goal with a: {a}, b: {b}")
+
+        result = StopFlag.Result()
+        self.stop_flag = goal_handle.request.a
         
+        # -------------------------
+        # stop sign goal
+        # -------------------------
+        if a == 3:
+            self.get_logger().info("camera detect human")
+            if self.human_obs_flag == 1:
+                self.get_logger().info("Lidar detect human")
+                self.stop_flag = 1
+                self.get_logger().info("SSSSTTTTOOOOPPPP")
+                
+            goal_handle.succeed()
+
+            return result
+        
+        else:
+            self.get_logger().info("Nothing detect")
+            #self.stop_flag = goal_handle.request.a
+            result.sum = a + b
+            goal_handle.succeed()
+
+        return result     
+
+    def stop_sign_flag_callback(self, msg):
+        if msg.data == "Detected":
+            self.stop_sign_flag = 1
+            self.get_logger().info(f"Received stop : {self.stop_sign_flag}")
+
+
+    # mannequin topic 
+    def mannequin_flag_callback(self, msg):
+        if msg.data == "Stop":
+            self.mannequin_flag = 1
+            self.get_logger().info(f"Received stop : {self.mannequin_flag}")
+
+############################################################################################
+
     def get_path(self, msg):
         #self.get_logger().info('Received path with %d waypoints' % len(msg.poses))
         path_x=[];path_y=[];path_z=[];  
@@ -271,8 +495,14 @@ class PathFollower(Node):
         relative_point_x = target_point[0] - position_x
         relative_point_y = target_point[1] - position_y
         relative_point = np.vstack((relative_point_x, relative_point_y, target_point[2]))
-        relative_point_rot, t_point_rot_matrix = rotation_xyz(relative_point, theta_x, theta_y, -theta_z)
+        #relative_point_rot, t_point_rot_matrix = rotation_xyz(relative_point, theta_x, theta_y, -theta_z)
         #relative_point_rot, t_point_rot_matrix = rotation_xyz(relative_point, theta_x, theta_y, -reverse_theta_z)
+        ############### add_back_flag ####################################
+        if self.sd_back_flag == 1 :
+            relative_point_rot, t_point_rot_matrix = rotation_xyz(relative_point, theta_x, theta_y, -reverse_theta_z) 
+        else :
+            relative_point_rot, t_point_rot_matrix = rotation_xyz(relative_point, theta_x, theta_y, -theta_z)   
+        ##################################################################
         target_rad = math.atan2(relative_point_rot[1], relative_point_rot[0])
         target_theta = (target_rad) * (180 / math.pi)
         
@@ -280,13 +510,13 @@ class PathFollower(Node):
         
         #set speed
         
-        speed_set = 0.5#55 AutoNav 1.10
-        speed = speed_set
+        #self.speed_set = 0.5#55 AutoNav 1.10
+        speed = self.speed_set
         
         ################# IGVC SelfDrive Full #20250601# #################
         if self.sd_full_flag == 1 :
             if self.waypoint_number == 18:
-                speed = speed_set#0.35
+                speed = self.speed_set#0.35
         ##################################################################
         
         points = self.obs_points 
@@ -375,7 +605,7 @@ class PathFollower(Node):
         
         
         ################# IGVC SelfDrive Full #20250601# #################
-        if self.sd_full_flag == 0:
+        if self.sd_full_flag == 1:
             
             ################# IGVC SelfDrive full sign stop #20250601# ################
             ###### stop1 #######
@@ -438,6 +668,18 @@ class PathFollower(Node):
                    self.sd_quolification_line_stop = 0
                    self.sd_human_stop = 0
                    self.sd_full_human_stop = 0
+            if self.sd_full_human_stop == 3: #flow3
+                if self.time_restart == 1 and self.stop_flag == 1:
+                    if self.human_status == "Go":
+                        self.time_restart_count -= 1
+                    if self.time_restart_count < 0:
+                        self.time_restart = 0
+                        self.stop_flag = 0
+                if self.waypoint_number == 12:
+                   self.sd_quolification_line_stop = 0
+                   self.sd_human_stop = 0
+                   self.sd_full_human_stop = 0
+            ###########################################################################
             ###########################################################################
             
         ##################################################################
@@ -473,7 +715,58 @@ class PathFollower(Node):
                     self.time_restart = 0
                     self.stop_flag = 0
         #################################################################################
-        
+        # SD function test III.1~3 stopsign and stopline stop (Tanaka tuika)
+        if self.sd_fn_3 == 1:
+            if self.stop_sign_flag == 1:
+                #self.get_logger().info("Stop sign mode start")
+                self.get_logger().info("Detecting white Line")
+                if self.stop_line_flag == 1:
+                    self.get_logger().info("SSSSSSSSSStop!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                    # ここで白線認識し、停止信号を出す予定。
+                    self.stop_flag = 1
+                    self.stop_flag_first_check = 1
+                    self.time_restart = 1
+                    if self.time_restart == 1 and self.stop_flag == 1:
+                        if self.stop_flag_first_check == 1:
+                            self.time_restart_count -= 1
+                        if self.time_restart_count < 0:
+                            self.time_restart = 0
+                            self.whiteline_detection_done = True
+
+
+            if self.whiteline_detection_done:
+                self.get_logger().info("Go!!!!!!!!!!!!!!!!!!!!!!!!$$$$$$$$$$$$$$$$")
+                self.stop_flag = 0
+                self.stop_sign_flag = 0
+                self.stop_line_flag = 0
+                self.time_restart_count = 100
+                self.whiteline_detection_done = False
+
+        # SD function test V.1~2 human stop
+        if self.sd_fn_5 == 1:
+            if self.mannequin_flag == 1:
+                self.get_logger().info("camera detect mannequin")
+                if self.human_obs_flag == 1:
+                    #self.get_logger().info("Lidar detect mannequin")
+                    self.get_logger().info("SSSSSSSSSStop!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                    self.stop_flag = 1
+                    self.stop_flag_first_check = 1
+                    self.time_restart = 1
+                    if self.time_restart == 1 and self.stop_flag == 1:
+                        if self.stop_flag_first_check == 1:
+                            self.time_restart_count -= 1
+                        if self.time_restart_count < 0:
+                            self.time_restart = 0
+                            self.mannequin_detection_done = True
+            
+            if self.mannequin_detection_done:
+                self.get_logger().info("GGGGGGGGGGGGGGGGGGGGGGo!")
+                self.stop_flag = 0
+                self.mannequin_flag = 0
+                self.human_obs_flag = 0
+                self.time_restart_count = 100
+                self.mannequin_detection_done = False
+        #####################################################################################################
         
         #elif abs(target_theta)  > 90:
         #    speed = 0.2
@@ -487,9 +780,14 @@ class PathFollower(Node):
         #make msg
         twist_msg = geometry_msgs.Twist()
         #check stop flag
+        ############### add_back_flag ####################################
         if self.stop_flag == 0:
-            twist_msg.linear.x = speed #0.3  # 前進速度 (m/s)
-            twist_msg.angular.z = target_rad_pd  # 角速度 (rad/s)
+            if self.sd_back_flag == 1 :
+                twist_msg.linear.x = -speed #0.3  # 前進速度 (m/s) 
+                twist_msg.angular.z = target_rad_pd  # 角速度 (rad/s) 
+            else:
+                twist_msg.linear.x = speed #0.3  # 前進速度 (m/s)
+                twist_msg.angular.z = target_rad_pd  # 角速度 (rad/s)
             #twist_msg.linear.x = -speed #0.3  # 前進速度 (m/s)
             #twist_msg.angular.z = -target_rad_pd # 角速度 (rad/s) back left to left
         else:
@@ -498,7 +796,12 @@ class PathFollower(Node):
         
         self.cmd_vel_publisher.publish(twist_msg)
         #self.get_logger().info('Publishing cmd_vel: linear.x = %f, angular.z = %f : %f deg' % (twist_msg.linear.x, twist_msg.angular.z, math.degrees(twist_msg.angular.z)))
-        
+        ##################################################################
+        # 人検知範囲をrvizで出力
+        #self.publish_human_area()
+        self.publish_stop_line_area()
+
+
     def set_target_rad(self, path, position_x, position_y, target_dist, theta_x, theta_y, theta_z):
         path_x_diff = path[0,:] - position_x
         path_y_diff = path[1,:] - position_y
@@ -531,7 +834,57 @@ class PathFollower(Node):
         self.theta_x = 0 #roll /math.pi*180
         self.theta_y = 0 #pitch /math.pi*180
         self.theta_z = yaw /math.pi*180
+
+    def transform_to_global(self, points):
+        # yaw（ラジアンに変換）
+        theta = math.radians(self.theta_z)
+
+        cos_t = math.cos(theta)
+        sin_t = math.sin(theta)
+
+        # ローカル座標
+        x = points[0, :]
+        y = points[1, :]
+        z = points[2, :]
+
+        # グローバル変換
+        x_g = self.position_x + x * cos_t - y * sin_t
+        y_g = self.position_y + x * sin_t + y * cos_t
+        z_g = z  # 高さはそのまま（必要なら調整）
+
+        return np.vstack((x_g, y_g, z_g))
+    
+    def local_to_global_box(self, x_min, x_max, y_min, y_max):
+        theta = math.radians(self.theta_z)
+
+        cos_t = math.cos(theta)
+        sin_t = math.sin(theta)
+
+        # 4点作る
+        corners = np.array([
+            [x_min, y_min],
+            [x_min, y_max],
+            [x_max, y_min],
+            [x_max, y_max]
+        ])
+
+        # 回転＋平行移動
+        global_pts = []
+        for x, y in corners:
+            gx = self.position_x + x * cos_t - y * sin_t
+            gy = self.position_y + x * sin_t + y * cos_t
+            global_pts.append([gx, gy])
+
+        global_pts = np.array(global_pts)
+
+        return (
+            np.min(global_pts[:,0]),
+            np.max(global_pts[:,0]),
+            np.min(global_pts[:,1]),
+            np.max(global_pts[:,1])
+        )
         
+
     def sensim0(self, steering):
         self.e_n = steering
         steering = (self.k_p * self.e_n + self.k_d*(self.e_n - self.e_n1))
@@ -576,7 +929,50 @@ class PathFollower(Node):
         point_cloud_matrix = np.vstack((x, y, z, intensity))
         
         return point_cloud_matrix
-        
+
+    def global_to_local(self, points):
+
+        # 自車位置（odom座標）
+        x = self.position_x
+        y = self.position_y
+
+        # 自車yaw
+        yaw = self.theta_z
+
+        # グローバル点群
+        gx = points[0, :]
+        gy = points[1, :]
+
+        # =========================
+        # 平行移動
+        # =========================
+
+        dx = gx - x
+        dy = gy - y
+
+        # =========================
+        # 回転（global -> local）
+        # =========================
+
+        c = np.cos(yaw)
+        s = np.sin(yaw)
+
+        local_x = c * dx - s * dy
+        local_y = s * dx + c * dy
+
+        # =========================
+        # z/intensityを戻す
+        # =========================
+
+        local_points = np.vstack((
+            local_x,
+            local_y,
+            points[2, :],
+            points[3, :]
+        )).astype(np.float32)
+
+        return local_points
+            
     def obs_steer(self, msg):
         
         #print stamp message
@@ -601,10 +997,73 @@ class PathFollower(Node):
         else:
             self.lh_obs = 0
 
+        # tsuika(Tanaka)
+        self.human_obs = self.pcd_serch(
+            points,
+            self.human_x_min,
+            self.human_x_max,
+            self.human_y_min,
+            self.human_y_max
+        )
+        
+        if np.any(self.human_obs):
+            self.human_obs_flag = 1
+        else:
+            #self.human_obs_flag = 0
+            print("!!None!!")
+
+
+    # SD function test Ⅲ.1~3 white(stop)line detection          
+    def stop_line_pcd(self, msg):
+        points = self.pointcloud2_to_array(msg)
+    
+        position_x=self.position_x; position_y=self.position_y; position_z=self.position_z;
+        position = np.array([position_x, position_y, position_z])
+        theta_x=-self.theta_x; theta_y=self.theta_y; theta_z=self.theta_z;
+        
+        # グローバル → ローカル逆変換
+        # ①先に平行移動を引く（引き算してからrotation）
+        ground_x_diff = points[0,:] - position_x
+        ground_y_diff = points[1,:] - position_y
+        ground_z_diff = points[2,:]
+        ground_diff = np.vstack((ground_x_diff, ground_y_diff, ground_z_diff))
+        
+        # ②逆回転（-theta_z で逆方向に回転）
+        ground_rot, ground_rot_matrix = rotation_xyz(ground_diff, -theta_x, -theta_y, -theta_z)
+        local_points = np.vstack((ground_rot[0,:], ground_rot[1,:], ground_rot[2,:], points[3,:]), dtype=np.float32)
+        
+        line_points = self.pcd_serch(
+            local_points,
+            self.stop_line_x_min,
+            self.stop_line_x_max,
+            self.stop_line_y_min,
+            self.stop_line_y_max
+        )
+
+ 
+      
+        self.publish_stop_line_points(local_points, msg.header)
+        #print(msg.header.frame_id)
+        #print("yaw=", self.theta_z)
+
+
+
+        if np.any(line_points):
+            self.stop_line_flag = 1
+            print("!!detect pointcloud!!")
+        else:
+            #self.stop_line_flag = 0
+            print("!!None!!")
+
+
+
+
     def pcd_serch(self, pointcloud, x_min, x_max, y_min, y_max):
-        pcd_ind = (( (x_min <= pointcloud[0,:]) * (pointcloud[0,:] <= x_max)) * ((y_min <= pointcloud[1,:]) * (pointcloud[1,:]) <= y_max ) )
+        #pcd_ind = (( (x_min <= pointcloud[0,:]) * (pointcloud[0,:] <= x_max)) * ((y_min <= pointcloud[1,:]) * (pointcloud[1,:]) <= y_max ) )
+        pcd_ind = ((x_min <= pointcloud[0,:]) & (pointcloud[0,:] <= x_max) & (y_min <= pointcloud[1,:]) & (pointcloud[1,:] <= y_max))
         pcd_mask = pointcloud[:, pcd_ind]
         return pcd_mask
+
 
 def rotation_xyz(pointcloud, theta_x, theta_y, theta_z):
     theta_x = math.radians(theta_x)
@@ -658,3 +1117,4 @@ def main(args=None):
 if __name__ == '__main__':
     # 関数`main`を実行する。
     main()
+
