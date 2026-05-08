@@ -15,6 +15,12 @@ from my_msgs.action import StopFlag ####
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Int32
 from std_msgs.msg import String
+from visualization_msgs.msg import Marker
+from geometry_msgs.msg import Point
+from tf_transformations import euler_from_quaternion
+from rclpy.duration import Duration
+from sensor_msgs.msg import PointCloud2, PointField
+import struct
 
 # C++と同じく、Node型を継承します。
 class PathFollower(Node):
@@ -36,6 +42,12 @@ class PathFollower(Node):
             depth = 1
         )
 
+        # transform_global_to_local
+        from tf2_ros import Buffer, TransformListener
+
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+
         # actionサーバーの生成(tuika)
         #self.server = ActionServer(self, StopFlag, "stop_flag", self.listener_callback)
 
@@ -48,7 +60,7 @@ class PathFollower(Node):
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom', self.get_odom, qos_profile_sub)
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom_ekf_match', self.get_odom, qos_profile_sub)
         #self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom_ref_slam', self.get_odom_ref, qos_profile_sub)
-        self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom_wheel_imu', self.get_odom_ref, qos_profile_sub)
+        self.subscription = self.create_subscription(nav_msgs.Odometry,'/odom/wheel_imu', self.get_odom_ref, qos_profile_sub)
         self.subscription = self.create_subscription(sensor_msgs.PointCloud2, '/pcd_segment_obs', self.obs_steer, qos_profile)
         self.goal_sub = self.create_subscription(PoseStamped, '/goal_pose', self.goal_pose_callback, qos_profile)
         self.stop_sub = self.create_subscription(String, '/stop_sign_status', self.stop_sign_callback, 10)
@@ -66,6 +78,10 @@ class PathFollower(Node):
         
         # Publisherを作成
         self.cmd_vel_publisher = self.create_publisher(geometry_msgs.Twist, 'cmd_vel', qos_profile) #set publish pcd topic name
+
+        self.marker_pub = self.create_publisher(Marker, 'lidar_detection_area', 10)
+
+        self.stop_line_pcd_pub = self.create_publisher(PointCloud2, 'stop_line_points', 10)
         
         # ============== SD function test V.1~2 human stop ==============
         # set up V.1~2 flag (1:use, 0:not use)
@@ -77,7 +93,7 @@ class PathFollower(Node):
         self.human_y_max = 0.25
 
         # first status init
-        self.mannequin_detection_done = None
+        self.mannequin_detection_done = False
         self.mannequin_flag = 0
         # ===============================================================
         
@@ -183,7 +199,7 @@ class PathFollower(Node):
         
         
         ################# IGVC SelfDrive Quolification line stop test #20250530# #################
-        self.sd_quolification_line_stop = 1 #root flag
+        self.sd_quolification_line_stop = 0 #root flag
         #self.sd_c_obs_stop_dist = 0.305*3 + 0.0254*2 + 0.4 + 0.37# 3feat + 2inch +top +delay
         self.sd_c_obs_stop_dist = 0.305*2 + 0.0254*2 + 0.4 + 0.37# 2feat + 2inch +top +delay 停止距離
         self.sd_c_obs_slow_dist = self.sd_c_obs_stop_dist + 1 #slow before 1m 
@@ -223,6 +239,102 @@ class PathFollower(Node):
         self.human_status = None    
         ##################################################################
 
+    def publish_human_area(self):
+        marker = Marker()
+
+        marker.header.frame_id = "odom"  # ← LiDAR基準ならこれ
+        marker.header.stamp = self.get_clock().now().to_msg()
+
+        marker.ns = "human_area"
+        marker.id = 0
+        marker.type = Marker.CUBE
+        marker.action = Marker.ADD
+
+        # 中心座標
+        marker.pose.position.x = (self.human_x_min + self.human_x_max) / 2
+        marker.pose.position.y = (self.human_y_min + self.human_y_max) / 2
+        marker.pose.position.z = 0.0
+
+        # サイズ
+        marker.scale.x = (self.human_x_max - self.human_x_min)
+        marker.scale.y = (self.human_y_max - self.human_y_min)
+        marker.scale.z = 0.05  # 薄い板
+
+        # 色（半透明）
+        marker.color.r = 1.0
+        marker.color.g = 0.0
+        marker.color.b = 0.0
+        marker.color.a = 0.3
+
+        self.marker_pub.publish(marker)
+
+    
+    def publish_stop_line_area(self):
+        marker = Marker()
+
+        marker.header.frame_id = "odom"  # ←人検知と揃える
+        marker.header.stamp = self.get_clock().now().to_msg()
+
+        marker.ns = "stop_line_area"
+        marker.id = 1   # ← human=0, stop_line=1 にする
+
+        marker.type = Marker.CUBE
+        marker.action = Marker.ADD
+
+        # 中心
+        marker.pose.position.x = (self.stop_line_x_min + self.stop_line_x_max) / 2
+        marker.pose.position.y = (self.stop_line_y_min + self.stop_line_y_max) / 2
+        marker.pose.position.z = 0.05
+
+        # サイズ
+        marker.scale.x = (self.stop_line_x_max - self.stop_line_x_min)
+        marker.scale.y = (self.stop_line_y_max - self.stop_line_y_min)
+        marker.scale.z = 0.02
+
+        # 色（青にすると区別しやすい）
+        marker.color.r = 0.0
+        marker.color.g = 0.0
+        marker.color.b = 1.0
+        marker.color.a = 0.4
+
+        self.marker_pub.publish(marker)
+    
+    def publish_stop_line_points(self, points, header):
+
+        if points.shape[1] == 0:
+            return  # 点がないときは出さない
+
+        msg = PointCloud2()
+        msg.header = header
+
+        msg.height = 1
+        msg.width = points.shape[1]
+
+        msg.fields = [
+            PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
+            PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
+            PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
+        ]
+
+        msg.is_bigendian = False
+        msg.point_step = 12
+        msg.row_step = msg.point_step * points.shape[1]
+        msg.is_dense = True
+
+        buffer = []
+        for i in range(points.shape[1]):
+            buffer.append(struct.pack('fff',
+                float(points[0, i]),
+                float(points[1, i]),
+                float(points[2, i])
+            ))
+
+        msg.data = b''.join(buffer)
+
+        self.stop_line_pcd_pub.publish(msg)
+
+
+
     # human stop SD function test V.1~3
     def listener_callback(self, goal_handle):
         a = goal_handle.request.a
@@ -240,6 +352,7 @@ class PathFollower(Node):
             if self.human_obs_flag == 1:
                 self.get_logger().info("Lidar detect human")
                 self.stop_flag = 1
+                self.get_logger().info("SSSSTTTTOOOOPPPP")
                 
             goal_handle.succeed()
 
@@ -272,6 +385,7 @@ class PathFollower(Node):
     def mannequin_flag_callback(self, msg):
         if msg.data == "Stop":
             self.mannequin_flag = 1
+            self.get_logger().info(f"Received stop : {self.mannequin_flag}")
 
 
 
@@ -631,7 +745,7 @@ class PathFollower(Node):
         # SD function test III.1~3 stopsign and stopline stop (Tanaka tuika)
         if self.sd_fn_3 == 1:
             if self.stop_sign_flag == 1:
-                self.get_logger().info("Stop sign mode start")
+                #self.get_logger().info("Stop sign mode start")
                 self.get_logger().info("Detecting white Line")
                 if self.stop_line_flag == 1:
                     self.get_logger().info("SSSSSSSSSStop!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -658,7 +772,7 @@ class PathFollower(Node):
         # SD function test V.1~2 human stop
         if self.sd_fn_5 == 1:
             if self.mannequin_flag == 1:
-                #self.get_logger().info("camera detect mannequin")
+                self.get_logger().info("camera detect mannequin")
                 if self.human_obs_flag == 1:
                     #self.get_logger().info("Lidar detect mannequin")
                     self.get_logger().info("SSSSSSSSSStop!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -673,12 +787,14 @@ class PathFollower(Node):
                             self.mannequin_detection_done = True
             
             if self.mannequin_detection_done:
-                self.get_logger().info("Go!")
+                self.get_logger().info("GGGGGGGGGGGGGGGGGGGGGGo!")
                 self.stop_flag = 0
                 self.mannequin_flag = 0
                 self.human_obs_flag = 0
                 self.time_restart_count = 100
                 self.mannequin_detection_done = False
+
+        
 
 
 
@@ -734,6 +850,10 @@ class PathFollower(Node):
         #print("!!!!!!!!!!!last_speed!!!!!!!!!!!!!!!") 
         #print(self.last_speed)
         ###################################################################
+
+        # 人検知範囲をrvizで出力
+        #self.publish_human_area()
+        self.publish_stop_line_area()
         
         
     def set_target_rad(self, path, position_x, position_y, target_dist, theta_x, theta_y, theta_z):
@@ -861,6 +981,49 @@ class PathFollower(Node):
         point_cloud_matrix = np.vstack((x, y, z, intensity))
         
         return point_cloud_matrix
+    
+    def global_to_local(self, points):
+
+        # 自車位置（odom座標）
+        x = self.position_x
+        y = self.position_y
+
+        # 自車yaw
+        yaw = self.theta_z
+
+        # グローバル点群
+        gx = points[0, :]
+        gy = points[1, :]
+
+        # =========================
+        # 平行移動
+        # =========================
+
+        dx = gx - x
+        dy = gy - y
+
+        # =========================
+        # 回転（global -> local）
+        # =========================
+
+        c = np.cos(yaw)
+        s = np.sin(yaw)
+
+        local_x = c * dx - s * dy
+        local_y = s * dx + c * dy
+
+        # =========================
+        # z/intensityを戻す
+        # =========================
+
+        local_points = np.vstack((
+            local_x,
+            local_y,
+            points[2, :],
+            points[3, :]
+        )).astype(np.float32)
+
+        return local_points
         
     def obs_steer(self, msg):
         
@@ -898,54 +1061,46 @@ class PathFollower(Node):
         if np.any(self.human_obs):
             self.human_obs_flag = 1
         else:
-            self.human_obs_flag = 0
+            #self.human_obs_flag = 0
+            print("!!None!!")
+
 
     # SD function test Ⅲ.1~3 white(stop)line detection          
     def stop_line_pcd(self, msg):
         points = self.pointcloud2_to_array(msg)
-        """
+    
         position_x=self.position_x; position_y=self.position_y; position_z=self.position_z;
         position = np.array([position_x, position_y, position_z])
-        theta_x=self.theta_x; theta_y=self.theta_y; theta_z=self.theta_z;
+        theta_x=-self.theta_x; theta_y=self.theta_y; theta_z=self.theta_z;
         
-        #ground global
-        ground_rot, ground_rot_matrix = rotation_xyz(points[[0,1,2],:], theta_x, theta_y, theta_z)
-        ground_x_local = ground_rot[0,:] - position_x
-        ground_y_local = ground_rot[1,:] - position_y
-        ground_local = np.vstack((ground_x_local, ground_y_local, ground_rot[2,:], points[3,:]) , dtype=np.float32)
-        """
-        #points = self.pointcloud2_to_array(msg)
-
-        # global座標
-        px = points[0, :]
-        py = points[1, :]
-        pz = points[2, :]
-
-        # 自車位置
-        t = np.array([self.position_x, self.position_y, self.position_z]).reshape(3,1)
-
-        # 回転行列（global方向）
-        _, R = rotation_xyz(np.zeros((3,1)), self.theta_x, self.theta_y, self.theta_z)
-
-        # ① 平行移動を戻す
-        translated = np.vstack((px, py, pz)) - t
-
-        # ② 逆回転（←これが肝）
-        R_inv = R.T
-        local_xyz = R_inv @ translated
-
-        # まとめ
-        ground_local = np.vstack((local_xyz, points[3,:]))
-
-        self.line_obs = self.pcd_serch(
-            ground_local,
+        # グローバル → ローカル逆変換
+        # ①先に平行移動を引く（引き算してからrotation）
+        ground_x_diff = points[0,:] - position_x
+        ground_y_diff = points[1,:] - position_y
+        ground_z_diff = points[2,:]
+        ground_diff = np.vstack((ground_x_diff, ground_y_diff, ground_z_diff))
+        
+        # ②逆回転（-theta_z で逆方向に回転）
+        ground_rot, ground_rot_matrix = rotation_xyz(ground_diff, -theta_x, -theta_y, -theta_z)
+        local_points = np.vstack((ground_rot[0,:], ground_rot[1,:], ground_rot[2,:], points[3,:]), dtype=np.float32)
+        
+        line_points = self.pcd_serch(
+            local_points,
             self.stop_line_x_min,
             self.stop_line_x_max,
             self.stop_line_y_min,
             self.stop_line_y_max
         )
-        
-        if np.any(self.line_obs):
+
+ 
+      
+        self.publish_stop_line_points(local_points, msg.header)
+        #print(msg.header.frame_id)
+        #print("yaw=", self.theta_z)
+
+
+
+        if np.any(line_points):
             self.stop_line_flag = 1
             print("!!detect pointcloud!!")
         else:
