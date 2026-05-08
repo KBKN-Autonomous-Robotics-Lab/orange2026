@@ -88,6 +88,8 @@ class MotorDriverNode(Node):
         # -----Initialize Publisher-----
         self.odom_pub = self.create_publisher(Odometry, "/odom", 1)
         self.odom_msg = Odometry()
+        self.estop_pub = self.create_publisher(Bool, "/estop", 1)
+        self.estop_msg = Bool()
 
         # -----Initialize subscriber-----
         self.create_subscription(
@@ -126,7 +128,7 @@ class MotorDriverNode(Node):
             self.dist_cmd_callback,
             1,
         )
-        self.create_subscription(Bool, "/estop", self.estop_callback, 1)
+        #self.create_subscription(Bool, "/estop", self.estop_callback, 1) # use estop_ros package
 
         # -----Initialize Control Mode-----
         self.control_mode = (
@@ -688,9 +690,12 @@ class MotorDriverNode(Node):
 
         if estop_status:
             # -----Emergency Stop-----
-            self.get_logger().warn("####################")
-            self.get_logger().warn("---EMERGENCY STOP---")
-            self.get_logger().warn("####################")
+            #self.get_logger().warn("####################")
+            #self.get_logger().warn("---EMERGENCY STOP---")
+            #self.get_logger().warn("####################")
+            self.estop_msg.data = True
+        else:
+            self.estop_msg.data = False
 
         if self.estop:
             # -----Emergency Stop-----
@@ -805,6 +810,9 @@ class MotorDriverNode(Node):
         self.period = time.perf_counter() - start_time
         self.prev_l_meter = self.l_meter
         self.prev_r_meter = self.r_meter
+
+        # -----Publish Estop Status-----
+        self.estop_pub.publish(self.estop_msg)
 
         # -----Debugging Feature-----
         if self.debug:
