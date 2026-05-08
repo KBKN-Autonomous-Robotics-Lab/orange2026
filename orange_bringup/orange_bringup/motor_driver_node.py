@@ -71,6 +71,9 @@ class MotorDriverNode(Node):
         self.L_CMD_REL_POS_HI = 0x208A
         self.L_FB_POS_HI = 0x20A7
 
+        # Status word
+        self.STATUS_WORD = 0x20A2
+
         # -----Control CMDs (REG)-----
         self.EMER_STOP = 0x05
         self.ALRM_CLR = 0x06
@@ -85,6 +88,8 @@ class MotorDriverNode(Node):
         # -----Initialize Publisher-----
         self.odom_pub = self.create_publisher(Odometry, "/odom", 1)
         self.odom_msg = Odometry()
+        self.estop_pub = self.create_publisher(Bool, "/estop", 1)
+        self.estop_msg = Bool()
 
         # -----Initialize subscriber-----
         self.create_subscription(
@@ -123,7 +128,7 @@ class MotorDriverNode(Node):
             self.dist_cmd_callback,
             1,
         )
-        self.create_subscription(Bool, "/estop", self.estop_callback, 1)
+        #self.create_subscription(Bool, "/estop", self.estop_callback, 1) # use estop_ros package
 
         # -----Initialize Control Mode-----
         self.control_mode = (
@@ -561,6 +566,33 @@ class MotorDriverNode(Node):
             self.L_CMD_RPM, [left_bytes, right_bytes], slave=self.ID
         )
 
+    def check_status(self):
+        try:
+            result = self.client.read_holding_registers(
+                self.STATUS_WORD,
+                1,
+                slave=self.ID
+            )
+
+            status = result.registers[0]
+
+            left_state = status & 0x00C0
+            right_state = status & 0xC000
+
+            left_emergency = (left_state == 0x0080)
+            right_emergency = (right_state == 0x8000)
+
+            if left_emergency or right_emergency:
+                estop_status = True
+            else:
+                estop_status = False
+
+            return estop_status
+
+        except Exception as e:
+            self.get_logger().error(str(e))
+            return False
+
     def set_relative_angle(self, ang_L, ang_R):
         L_array = self.deg_to_32bitArray(ang_L / 4)
         R_array = self.deg_to_32bitArray(ang_R / 4)
@@ -654,6 +686,17 @@ class MotorDriverNode(Node):
 
     def control_loop(self):
         start_time = time.perf_counter()
+        estop_status = self.check_status()
+
+        if estop_status:
+            # -----Emergency Stop-----
+            #self.get_logger().warn("####################")
+            #self.get_logger().warn("---EMERGENCY STOP---")
+            #self.get_logger().warn("####################")
+            self.estop_msg.data = True
+        else:
+            self.estop_msg.data = False
+
         if self.estop:
             # -----Emergency Stop-----
             if self.control_mode == 3:
@@ -767,6 +810,9 @@ class MotorDriverNode(Node):
         self.period = time.perf_counter() - start_time
         self.prev_l_meter = self.l_meter
         self.prev_r_meter = self.r_meter
+
+        # -----Publish Estop Status-----
+        self.estop_pub.publish(self.estop_msg)
 
         # -----Debugging Feature-----
         if self.debug:
