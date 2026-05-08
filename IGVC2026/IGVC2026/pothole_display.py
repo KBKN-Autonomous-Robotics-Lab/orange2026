@@ -8,7 +8,7 @@ class PotholeDisplay(Node):
         super().__init__('pothole_display')
 
         # camera
-        self.cap = cv2.VideoCapture('/dev/sensors/camera', cv2.CAP_V4L2)
+        self.cap = cv2.VideoCapture('/dev/camera', cv2.CAP_V4L2)
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -28,15 +28,18 @@ class PotholeDisplay(Node):
             return
         
         # pothole color white
-        white_blur = cv2.GaussianBlur(frame, (5, 5), 0)
-        #hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
+        #white_blur = cv2.GaussianBlur(frame, (5, 5), 0)
+        hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
         # whiteの抽出
-        lower_white = np.array([100, 100, 100])
-        upper_white = np.array([255, 255, 255])
-        white_mask = cv2.inRange(white_blur, lower_white, upper_white)
-
+        lower_white = np.array([0, 0, 180])
+        upper_white = np.array([180, 60, 255])
+        #white_mask = cv2.inRange(white_blur, lower_white, upper_white)
+        mask = cv2.inRange(hsv, lower_white, upper_white)
+        kernel = np.ones((5,5), np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
         contours, _ = cv2.findContours(
-            white_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         # 高さ93cmで約300cm先から地面が見える。視線の下端が地面よ交わる角度は約17.2度
         max_short_axis = 95
@@ -47,30 +50,32 @@ class PotholeDisplay(Node):
         for cnt in contours:
             #max_ellipse_area = (np.pi/4) * (max_long_axis) * (max_short_axis)
             #min_ellipse_area = (np.pi/4) * (min_long_axis) * (min_short_axis)
-            if len(cnt) >= 5:
+            if len(cnt) < 5:
                 continue
             
             area = cv2.contourArea(cnt)
-            if area < 500:
+            if area < 1500:
                 continue
-
+            
             perimeter = cv2.arcLength(cnt, True)
             if perimeter == 0:
                 continue
 
             circularity = 4 * np.pi * area / (perimeter * perimeter)
-            if circularity < 0.7:
-                continue
-
-            (center, (w, h), angle) = cv2.fitEllipse(cnt)
-            major = max(w, h)
-            minor = min(w, h)
-
-            ratio = minor / major
-            if ratio < 0.6:
+            if circularity < 0.65:
                 continue
             
-            cv2.drawContours(frame, [cnt], 0, (0, 255, 0), cv2.FILLED)
+            ellipse = cv2.fitEllipse(cnt)
+            (cx, cy), (w, h) , angle = ellipse
+            major = max(w, h)
+            minor = min(w, h)
+            
+            ratio = minor / major
+            if ratio > 2.0:
+                continue
+            
+            
+            cv2.ellipse(frame, ellipse, (0, 255, 0), 10)
 
     
         cv2.imshow("pothole", frame)
