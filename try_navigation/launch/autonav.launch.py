@@ -145,14 +145,24 @@ def generate_launch_description():
             output='screen',
             arguments=[],
         ),
-        #takamori Autonav
+        
+        #hatori dbscan
         Node(package='try_navigation',
-            executable='reflection_to_pcd',
-            name='reflection_to_pcd',
+            executable='reflection_to_pcd_dbscan',
+            name='reflection_to_pcd_dbscan',
             output='screen',
             parameters=[{'odom': odom}],
             arguments=[],
         ),
+        
+        #takamori Autonav
+        #Node(package='try_navigation',
+         #   executable='reflection_to_pcd',
+          #  name='reflection_to_pcd',
+           ##parameters=[{'odom': odom}],
+            #arguments=[],
+        #),
+        
         #takamori Selfdrive
         #Node(package='try_navigation',
         #    executable='self_drive_line',
