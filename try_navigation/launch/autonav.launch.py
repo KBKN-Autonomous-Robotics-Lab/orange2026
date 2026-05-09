@@ -25,7 +25,7 @@ def generate_launch_description():
     odom = LaunchConfiguration('odom')
     declare_odom_arg = DeclareLaunchArgument(
         'odom',
-        default_value='/odom/wheel_imu',
+        default_value='fusion/odom',
         description='Odometry topic name'
     )
 
@@ -33,7 +33,7 @@ def generate_launch_description():
     speed_set = LaunchConfiguration('speed_set')
     speed_set_arg = DeclareLaunchArgument(
         'speed_set',
-        default_value='1.10',
+        default_value='0.5',
         description='speed_set name'
     )
     #DRIVE MODE #autonav:1 selfdrive:0
