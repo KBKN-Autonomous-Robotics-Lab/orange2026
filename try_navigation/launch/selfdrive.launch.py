@@ -100,10 +100,18 @@ def generate_launch_description():
         default_value='0',
         description='sd_line_stop_test name'
     )
+    #WayPointRange
+    determine_dist = LaunchConfiguration('determine_dist')
+    determine_dist_arg = DeclareLaunchArgument(
+        'determine_dist',
+        default_value='4.5',
+        description='determine_dist name'
+    )
+    
     ##################################################################################################################################
     return LaunchDescription([
     
-        declare_odom_arg, sd_quolification_line_stop_arg, sd_line_stop_set_arg, sd_human_stop_arg, sd_full_flag_arg, sd_back_flag_arg, sd_fn_5_arg, sd_fn_3_arg , speed_set_arg,  functions_test_arg, sd_line_stop_test_arg,
+        declare_odom_arg, sd_quolification_line_stop_arg, sd_line_stop_set_arg, sd_human_stop_arg, sd_full_flag_arg, sd_back_flag_arg, sd_fn_5_arg, sd_fn_3_arg , speed_set_arg,  functions_test_arg, sd_line_stop_test_arg, determine_dist_arg,
     
         #rviz2
         Node(package='rviz2',
@@ -162,7 +170,8 @@ def generate_launch_description():
             executable='gps_waypoint',
             name='gps_waypoint',
             output='screen',
-            parameters=[{'odom': odom}],
+            parameters=[{'odom': odom},
+                        {'determine_dist': determine_dist}],
             arguments=[],
         ),
         # $ ros2 run navigation_control gps_waypoint
@@ -196,8 +205,8 @@ def generate_launch_description():
                         {'sd_human_stop': sd_human_stop},
                         {'sd_full_flag': sd_full_flag},
                         {'sd_back_flag': sd_back_flag},
-                        {'sd_fn_5_arg': sd_fn_5_arg},
-                        {'sd_fn_3_arg': sd_fn_3_arg},
+                        {'sd_fn_5': sd_fn_5},
+                        {'sd_fn_3': sd_fn_3},
                         {'speed_set': speed_set}],
             arguments=[],
         ),

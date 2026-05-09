@@ -43,6 +43,13 @@ def generate_launch_description():
         default_value='1',
         description='functions_test name'
     )
+    #WayPointRange
+    determine_dist = LaunchConfiguration('determine_dist')
+    determine_dist_arg = DeclareLaunchArgument(
+        'determine_dist',
+        default_value='4.5',
+        description='determine_dist name'
+    )
     
     ##################################################################################################################################
     return LaunchDescription([
@@ -106,7 +113,8 @@ def generate_launch_description():
             executable='gps_waypoint',
             name='gps_waypoint',
             output='screen',
-            parameters=[{'odom': odom}],
+            parameters=[{'odom': odom},
+                        {'determine_dist': determine_dist}],
             arguments=[],
         ),
         # $ ros2 run navigation_control gps_waypoint
