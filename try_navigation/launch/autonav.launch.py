@@ -25,7 +25,7 @@ def generate_launch_description():
     odom = LaunchConfiguration('odom')
     declare_odom_arg = DeclareLaunchArgument(
         'odom',
-        default_value='fusion/odom',
+        default_value='/odom/wheel_imu',
         description='Odometry topic name'
     )
 
@@ -47,14 +47,14 @@ def generate_launch_description():
     determine_dist = LaunchConfiguration('determine_dist')
     determine_dist_arg = DeclareLaunchArgument(
         'determine_dist',
-        default_value='4.5',
+        default_value='2.5',
         description='determine_dist name'
     )
     
     ##################################################################################################################################
     return LaunchDescription([
     
-        declare_odom_arg, speed_set_arg,  functions_test_arg,
+        declare_odom_arg, speed_set_arg,  functions_test_arg, determine_dist_arg,
     
         #rviz2
         Node(package='rviz2',
