@@ -25,7 +25,7 @@ def generate_launch_description():
     odom = LaunchConfiguration('odom')
     declare_odom_arg = DeclareLaunchArgument(
         'odom',
-        default_value='/odom/wheel_imu',#/odom/wheel_imu
+        default_value='fusion/odom',#/odom/wheel_imu
         description='Odometry topic name'
     )
     # IGVC SelfDrive Quolification line stop test
@@ -64,18 +64,18 @@ def generate_launch_description():
         default_value='0',
         description='sd_back_flag name'
     )
-    #################tuika_?????###################
+    #################human_action_tukaenai_toki?????###################
     sd_fn_5 = LaunchConfiguration('sd_fn_5')
     sd_fn_5_arg = DeclareLaunchArgument(
         'sd_fn_5',
         default_value='0',
         description='sd_fn_5 name'
     )
-    #################tuika_?????##############
+    #################stop_line_teishi##############
     sd_fn_3 = LaunchConfiguration('sd_fn_3')
     sd_fn_3_arg = DeclareLaunchArgument(
         'sd_fn_3',
-        default_value='0',
+        default_value='1',
         description='sd_fn_3 name'
     )
     
@@ -104,7 +104,7 @@ def generate_launch_description():
     determine_dist = LaunchConfiguration('determine_dist')
     determine_dist_arg = DeclareLaunchArgument(
         'determine_dist',
-        default_value='4.5',
+        default_value='1.5',
         description='determine_dist name'
     )
     

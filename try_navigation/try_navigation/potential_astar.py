@@ -159,7 +159,7 @@ class PotentialAStar(Node):
         self.obs_info = [
             #   0       1     2        3         4         5           6
             #tire pothole human stopsign whiteline solidline  dashedline
-            [   0,      0,    0,       1,        1,        1,          0], # waypoint  0 front stop
+            [   0,      0,    0,       1,        1,        1,          1], # waypoint  0 front stop
             [   0,      0,    0,       1,        1,        1,          0], # waypoint  1 front r lane
             [   0,      0,    0,       0,        1,        1,          1], # waypoint  2 curve
             [   0,      0,    0,       0,        1,        1,          1], # waypoint  3 front barrel

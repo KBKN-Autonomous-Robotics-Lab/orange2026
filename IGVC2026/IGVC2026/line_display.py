@@ -8,7 +8,7 @@ class WhiteLineDetection(Node):
         super().__init__('whiteline_detection')
 
         # camera
-        self.cap = cv2.VideoCapture('/dev/sensors/camera', cv2.CAP_V4L2)
+        self.cap = cv2.VideoCapture('/dev/camera', cv2.CAP_V4L2)
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
