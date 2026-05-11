@@ -104,13 +104,13 @@ class GPSData(Node):
         self._open_new_csv()
     
     def init_gps_callback(self, msg):
-    self.start_lat = msg.latitude
-    self.start_lon = msg.longitude
-    self.start_GPS_coordinate = [self.start_lat, self.start_lon]
-    self.received_init_gps = True
+        self.start_lat = msg.latitude
+        self.start_lon = msg.longitude
+        self.start_GPS_coordinate = [self.start_lat, self.start_lon]
+        self.received_init_gps = True
 
-    self.get_logger().info(
-        f"Received /init_gps: start_lat={self.start_lat}, start_lon={self.start_lon}"
+        self.get_logger().info(
+           f"Received /init_gps: start_lat={self.start_lat}, start_lon={self.start_lon}"
     )
     
     # service client
@@ -147,8 +147,8 @@ class GPSData(Node):
     # gps data collect
     def start_gps_acquisition(self):
         if not self.received_init_gps:
-        self.get_logger().warn(
-            "まだ /init_gps を受信していません。gps_waypoint.py から init_lat/init_lon を受け取ってから開始してください。"
+            self.get_logger().warn(
+                "まだ /init_gps を受信していません。gps_waypoint.py から init_lat/init_lon を受け取ってから開始してください。"
         )
         return
         
