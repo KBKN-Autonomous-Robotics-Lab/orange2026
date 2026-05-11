@@ -415,21 +415,22 @@ class PotentialAStar(Node):
         # ===== 白線の使い分け =====
         if self.functions_test == 1:
             # autonav
-    	    # 全白線 white_lines も waypoint ごとの設定で見る/見ないを決める
-    	    if self.obs_info[self.waypoint_number][self.whiteline_info] == 1:
-    	        if white_line_local.shape[1] > 0:
-    	            obs_points = np.insert(
-    	                obs_points, len(obs_points[0, :]), white_line_local.T, axis=1
-    	            )
+            # 全白線 white_lines も waypoint ごとの設定で見る/見ないを決める
+            if self.obs_info[self.waypoint_number][self.whiteline_info] == 1:
+                if white_line_local.shape[1] > 0:
+                    obs_points = np.insert(
+                        obs_points, len(obs_points[0, :]), white_line_local.T, axis=1
+                    )
 
         else:
             # selfdrive
 
-            # 実線は常に障害物として見る
-            if solid_line_local.shape[1] > 0:
-                obs_points = np.insert(
-                    obs_points, len(obs_points[0, :]), solid_line_local.T, axis=1
-                )
+            # 実線も waypoint ごとの設定で見る/見ないを決める
+            if self.obs_info[self.waypoint_number][self.solidline_info] == 1:
+                if solid_line_local.shape[1] > 0:
+                    obs_points = np.insert(
+                        obs_points, len(obs_points[0, :]), solid_line_local.T, axis=1
+                    )
 
             # 破線は waypoint ごとの設定で見る/見ないを決める
             if self.obs_info[self.waypoint_number][self.dashedline_info] == 1:
