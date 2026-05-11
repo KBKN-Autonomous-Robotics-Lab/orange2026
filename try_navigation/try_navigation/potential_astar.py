@@ -160,7 +160,7 @@ class PotentialAStar(Node):
             #   0       1     2        3         4         5           6
             #tire pothole human stopsign whiteline solidline  dashedline
             [   0,      0,    0,       1,        1,        1,          1], # waypoint  0 front stop
-            [   0,      0,    0,       1,        1,        1,          0], # waypoint  1 front r lane
+            [   0,      0,    0,       1,        1,        0,          0], # waypoint  1 front r lane
             [   0,      0,    0,       0,        1,        1,          1], # waypoint  2 curve
             [   0,      0,    0,       0,        1,        1,          1], # waypoint  3 front barrel
             [   0,      0,    0,       0,        1,        1,          0], # waypoint  4 next barrel :lanechange
@@ -425,20 +425,23 @@ class PotentialAStar(Node):
    
         # ===== 白線の使い分け =====
         if self.functions_test == 1:
-                # autonav
+            # autonav
             # 全白線 white_lines も waypoint ごとの設定で見る/見ないを決める
             if self.obs_info[self.waypoint_number][self.whiteline_info] == 1:
                 if white_line_local.shape[1] > 0:
                     obs_points = np.insert(
                         obs_points, len(obs_points[0, :]), white_line_local.T, axis=1
                     )
+
         else:
             # selfdrive
-            # 実線は常に障害物として見る
-            if solid_line_local.shape[1] > 0:
-                obs_points = np.insert(
-                    obs_points, len(obs_points[0, :]), solid_line_local.T, axis=1
-                )
+
+            # 実線も waypoint ごとの設定で見る/見ないを決める
+            if self.obs_info[self.waypoint_number][self.solidline_info] == 1:
+                if solid_line_local.shape[1] > 0:
+                    obs_points = np.insert(
+                        obs_points, len(obs_points[0, :]), solid_line_local.T, axis=1
+                    )
 
             # 破線は waypoint ごとの設定で見る/見ないを決める
             if self.obs_info[self.waypoint_number][self.dashedline_info] == 1:
