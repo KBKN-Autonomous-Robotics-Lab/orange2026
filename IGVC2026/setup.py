@@ -43,6 +43,7 @@ setup(
             'pothole_display = IGVC2026.pothole_display:main',
             'line_display = IGVC2026.line_display:main',
             'mannequin_detection = IGVC2026.mannequin_detection:main',
+            'selfdrive_full_detection = IGVC2026.selfdrive_full_detection:main',
         ],
     },
 )
