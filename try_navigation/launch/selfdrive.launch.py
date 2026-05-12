@@ -25,7 +25,7 @@ def generate_launch_description():
     odom = LaunchConfiguration('odom')
     declare_odom_arg = DeclareLaunchArgument(
         'odom',
-        default_value='fusion/odom',#/odom/wheel_imu
+        default_value='/odom/wheel_imu',
         description='Odometry topic name'
     )
     # IGVC SelfDrive Quolification line stop test

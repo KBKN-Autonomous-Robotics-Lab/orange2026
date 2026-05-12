@@ -116,7 +116,7 @@ class PathFollower(Node):
         #self.sd_fn_5 = 0
         # LiDAR human detection area (m) SD V.1~3 variable
         self.human_x_min = 1.0
-        self.human_x_max = 2.4
+        self.human_x_max = 2.2
         self.human_y_min = -0.25
         self.human_y_max = 0.25
 
@@ -131,7 +131,7 @@ class PathFollower(Node):
         
         # LiDAR stop detection area (m) SD Ⅲ.1~3 variable
         self.stop_line_x_min = 0.1
-        self.stop_line_x_max = 0.7
+        self.stop_line_x_max = 0.8
         self.stop_line_y_min = -0.2
         self.stop_line_y_max = 0.2
 
