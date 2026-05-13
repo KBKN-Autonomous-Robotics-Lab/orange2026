@@ -25,7 +25,7 @@ def generate_launch_description():
     odom = LaunchConfiguration('odom')
     declare_odom_arg = DeclareLaunchArgument(
         'odom',
-        default_value='fusion/odom',
+        default_value='/fusion/odom', #/odom/wheel_imu or /fusion/odom
         description='Odometry topic name'
     )
 
@@ -155,13 +155,13 @@ def generate_launch_description():
         ),
         
         #hatori dbscan
-        #Node(package='try_navigation',
-        #    executable='reflection_to_pcd_dbscan',
-         #   name='reflection_to_pcd_dbscan',
-          #  output='screen',
-           # parameters=[{'odom': odom}],
-            #arguments=[],
-        #),
+        Node(package='try_navigation',
+            executable='reflection_to_pcd_dbscan',
+            name='reflection_to_pcd_dbscan',
+            output='screen',
+            parameters=[{'odom': odom}],
+            arguments=[],
+        ),
         
         #takamori Autonav
         #Node(package='try_navigation',
