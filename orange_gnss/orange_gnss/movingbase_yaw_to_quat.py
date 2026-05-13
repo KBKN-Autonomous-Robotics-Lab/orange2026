@@ -142,7 +142,8 @@ class MovingBaseNode(Node):
 
             if self.count == 0:
                 self.get_logger().info(f"!!!----------robotheading: {heading} deg----------!!!")
-                self.first_heading = heading
+                #self.first_heading = heading
+                self.first_heading = 0
                 self.count = 1
 
             relative_heading = heading - self.first_heading

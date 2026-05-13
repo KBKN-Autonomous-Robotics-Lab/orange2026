@@ -69,7 +69,7 @@ class ExtendedKalmanFilter(Node):
         self.sub_a = self.create_subscription(
             Odometry, '/odom/combine', self.sensor_a_callback, 10)
         self.sub_b = self.create_subscription(
-            Odometry, '/odom/UM982', self.sensor_b_callback, 10)
+            Odometry, '/odom_CLAS_movingbase', self.sensor_b_callback, 10)
         #self.sub_b = self.create_subscription(
         #    Odometry, '/odom_ref_slam', self.sensor_b_callback, 10)
 
@@ -173,7 +173,7 @@ class ExtendedKalmanFilter(Node):
 
     def determination_of_R(self):
         if self.GpsXY is not None:
-            if (-30<self.GpsXY[0]) and (self.GpsXY[0]<90) and (-120 < self.GpsXY[1]) and (self.GpsXY[1]<-40):
+            if (0<self.GpsXY[0]) and (self.GpsXY[0]<1) and (0 < self.GpsXY[1]) and (self.GpsXY[1]<1):
                 self.gps_rr_flag = 1
                 #self.gps_rr_flag = 0
                 #self.offsetyaw_bad_gps = -10/180*math.pi
