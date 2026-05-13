@@ -70,8 +70,9 @@ class ExtendedKalmanFilter(Node):
             Odometry, '/odom/combine', self.sensor_a_callback, 10)
         self.sub_b = self.create_subscription(
             Odometry, '/odom_CLAS_movingbase', self.sensor_b_callback, 10)
+        ######################UM982ni hennkou surutokini tukau ##########################################################################
         #self.sub_b = self.create_subscription(
-        #    Odometry, '/odom_ref_slam', self.sensor_b_callback, 10)
+        #    Odometry, '/odom/UM982', self.sensor_b_callback, 10)
 
         self.declare_parameter("ekf_publish_TF", True)
         self.ekf_publish_TF = self.get_parameter(

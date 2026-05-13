@@ -91,14 +91,6 @@
   <!-- GPSposition_publisher -->
   <!-- initial heading:housei nakaniwa=179.169287 tsukuba= 276.5 -->
   <!-- GPSheading_publisher -->
-  <!-- <node pkg="orange_gnss" exec="gnss_odom_movingbase_fix_publisher_ttyUSB" output="screen">
-    <param name="port" value="/dev/sensors/GNSS_UM982"/>
-    <param name="baud" value="115200"/>
-    <param name="country_id" value="0"/>
-    <param name="Position_magnification" value="1.675"/>
-    <param name="heading" value="0.0"/>
-    <param name="time_out" value="1.0"/>
-  </node> -->
    <!--  <node pkg="orange_gnss" exec="get_gnss_data_ttyUSB" output="screen">
     <param name="port" value="/dev/sensors/gps"/>
     <param name="baud" value="115200"/>
@@ -138,17 +130,7 @@
   </node>
   <node pkg="orange_gnss" exec="combination" output="screen">
   </node>
-  <!-- 
-  <node pkg="orange_gnss" exec="GPSodom_correction" output="screen">
-  </node>
-   -->
-  <!-- combination_GPSposition_GPSheading -->
-  <!--<node pkg="orange_gnss" exec="combination" output="screen">
-  </node>-->
-  <!-- ekf_myself -->
-  <!-- node pkg="orange_gnss" exec="ekf_myself" output="screen" >
-    <param name="ekf_publish_TF" value="True"/>
-  </node> -->
+  
   <!-- hokuyo -->
   <!--<node pkg="urg_node" exec="urg_node_driver">
     <param name="serial_port" value="/dev/sensors/hokuyo_urg"/>
