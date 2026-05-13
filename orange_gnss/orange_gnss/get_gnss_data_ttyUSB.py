@@ -150,7 +150,7 @@ class GPSData(Node):
             self.get_logger().warn(
                 "まだ /init_gps を受信していません。gps_waypoint.py から init_lat/init_lon を受け取ってから開始してください。"
         )
-        return
+            return
         
         if not self.is_acquiring:
             self.is_acquiring = True
