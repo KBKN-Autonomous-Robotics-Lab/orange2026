@@ -150,7 +150,7 @@ class lonlat_To_Odom(Node):
         return point
 
     def publish_lonlat_to_odom(self):
-        if not self.receive_init_gps:
+        if not self.received_init_gps:
             return
             
         lonlat = [self.latitude, self.longitude]
