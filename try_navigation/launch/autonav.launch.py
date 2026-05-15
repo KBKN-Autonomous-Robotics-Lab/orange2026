@@ -33,7 +33,7 @@ def generate_launch_description():
     speed_set = LaunchConfiguration('speed_set')
     speed_set_arg = DeclareLaunchArgument(
         'speed_set',
-        default_value='1.0',
+        default_value='0.8',
         description='speed_set name'
     )
     #DRIVE MODE #autonav:1 selfdrive:0
@@ -47,7 +47,7 @@ def generate_launch_description():
     determine_dist = LaunchConfiguration('determine_dist')
     determine_dist_arg = DeclareLaunchArgument(
         'determine_dist',
-        default_value='4.5',
+        default_value='3.0',
         description='determine_dist name'
     )
     
@@ -155,13 +155,13 @@ def generate_launch_description():
         ),
         
         #hatori dbscan
-        Node(package='try_navigation',
-            executable='reflection_to_pcd_dbscan',
-            name='reflection_to_pcd_dbscan',
-            output='screen',
-            parameters=[{'odom': odom}],
-            arguments=[],
-        ),
+    #    Node(package='try_navigation',
+     #       executable='reflection_to_pcd_dbscan',
+      #      name='reflection_to_pcd_dbscan',
+       #     output='screen',
+        #    parameters=[{'odom': odom}],
+         #   arguments=[],
+        #),
         
         #takamori Autonav
         #Node(package='try_navigation',
