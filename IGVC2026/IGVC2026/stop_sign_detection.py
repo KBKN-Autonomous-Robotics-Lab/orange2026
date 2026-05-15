@@ -62,9 +62,9 @@ class StopsignDetection(Node):
         if not ret:
             return
             
-        results = self.model(frame, verbose=False)
-        stop_sign_status = self.detect_stop_sign(frame, results)
-
+        #results = self.model(frame, verbose=False)
+        #stop_sign_status = self.detect_stop_sign(frame, results)
+        stop_sign_status = self.detect_stop_sign(frame)
         self.publisher.publish(String(data=stop_sign_status))
         self.get_logger().info(f'Published stopsign status: {stop_sign_status}')
         
@@ -112,8 +112,9 @@ class StopsignDetection(Node):
 
 
 
-    def detect_stop_sign(self, frame, results):
+    def detect_stop_sign(self, frame):
         stop_sign_detected = False
+        results = self.model(frame, verbose=False)
         for result in results:
             for box in result.boxes:
                 cls_id = int(box.cls[0])

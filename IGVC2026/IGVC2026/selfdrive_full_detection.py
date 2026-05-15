@@ -22,9 +22,9 @@ class Selfdrivefulldetection(Node):
 
         # camera
         # my pc
-        #self.cap = cv2.VideoCapture('/dev/sensors/camera', cv2.CAP_V4L2)
+        self.cap = cv2.VideoCapture('/dev/sensors/camera', cv2.CAP_V4L2)
         # robot
-        self.cap = cv2.VideoCapture('/dev/camera', cv2.CAP_V4L2)
+        #self.cap = cv2.VideoCapture('/dev/camera', cv2.CAP_V4L2)
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -64,11 +64,11 @@ class Selfdrivefulldetection(Node):
         if not ret:
             return
             
-        results = self.model(frame, verbose=False)
+        #results = self.model(frame, verbose=False)
         # detect_stop_sign関数からstopsignのstatusを受け取る。
-        stop_sign_status = self.detect_stop_sign(frame, results)
+        stop_sign_status = self.detect_stop_sign(frame)
         # detect_human関数からhumanのstatusを受け取る。
-        human_status = self.detect_human(frame, results)
+        human_status = self.detect_human(frame)
               
         # ========================= 以下,人が見えなくなったら5秒後に再走行 =========================  
         now = time.time()
@@ -116,8 +116,9 @@ class Selfdrivefulldetection(Node):
 
 
 
-    def detect_stop_sign(self, frame, results):
+    def detect_stop_sign(self, frame):
         stop_sign_detected = False
+        results = self.model(frame, verbose=False)
         for result in results:
             for box in result.boxes:
                 cls_id = int(box.cls[0])
@@ -148,7 +149,8 @@ class Selfdrivefulldetection(Node):
     
         return status
 
-    def detect_human(self, frame, results):
+    def detect_human(self, frame):
+        results = self.model(frame, verbose=False)
         human_detected = False
         K = 950 # キャリブレーション K = h * distance
         # K = 800で人からの停止位置1.9m前後 K > 800 good
